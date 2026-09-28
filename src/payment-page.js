@@ -21,8 +21,8 @@
  * the server states them.
  */
 
-import { startQr } from './qr';
-import { startWallets } from './wallets';
+import { startQr } from './qr.js';
+import { startWallets } from './wallets.js';
 
 const POLL_INTERVAL_MS = 8000;
 const REDIRECT_DELAY_S = 5;

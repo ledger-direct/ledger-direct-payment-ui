@@ -1,3 +1,9 @@
+# 0.1.1
+
+- Relative imports in `src/payment-page.js` name their file extension (`./qr.js`, `./wallets.js`). The
+  package is `"type": "module"`, so a bundler that follows the ESM rules — Shopware's webpack does —
+  refused the extension-less form. `dist/` is unchanged in behaviour.
+
 # 0.1.0
 
 First release, lifted from the Shopware plugin 1.4.0 (`src/Resources/app/storefront/src/payment-ui/`)

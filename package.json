@@ -1,7 +1,7 @@
 {
   "name": "@ledger-direct/payment-ui",
-  "version": "0.1.0",
-  "description": "The LedgerDirect payment page: states, countdown, polling, QR code and browser wallets — framework-free, one implementation for every LedgerDirect plugin",
+  "version": "0.1.1",
+  "description": "The LedgerDirect payment page: states, countdown, polling, QR code and browser wallets \u2014 framework-free, one implementation for every LedgerDirect plugin",
   "license": "MIT",
   "author": "Alexander Busse | Hardcastle Technologies",
   "homepage": "https://www.ledger-direct.com",
