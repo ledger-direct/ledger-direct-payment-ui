@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "base_asset": "XRP",
+  "amount_requested": 0.74791,
+  "state": "settled",
+  "amount_paid": 0.74791,
+  "shortfall": null,
+  "seconds_left": null,
+  "redirect": "http://localhost:8765/?state=waiting&settled=1"
+}

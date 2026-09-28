@@ -1,0 +1,42 @@
+{
+  "name": "@ledger-direct/payment-ui",
+  "version": "0.1.0",
+  "description": "The LedgerDirect payment page: states, countdown, polling, QR code and browser wallets — framework-free, one implementation for every LedgerDirect plugin",
+  "license": "MIT",
+  "author": "Alexander Busse | Hardcastle Technologies",
+  "homepage": "https://www.ledger-direct.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ledger-direct/ledger-direct-payment-ui.git"
+  },
+  "type": "module",
+  "main": "./dist/payment-page.js",
+  "module": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./src/*": "./src/*",
+    "./dist/*": "./dist/*"
+  },
+  "files": [
+    "src",
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test test/*.test.js",
+    "serve": "node test/fixture/serve.mjs"
+  },
+  "dependencies": {
+    "qrcode-generator": "^2.0.4",
+    "xrpl": "^4.6.0",
+    "xrpl-connect": "1.0.0-rc.2"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

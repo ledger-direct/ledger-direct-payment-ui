@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "base_asset": "XRP",
+  "amount_requested": 0.74791,
+  "state": "partial",
+  "amount_paid": 0.3,
+  "shortfall": 0.44791,
+  "seconds_left": null
+}

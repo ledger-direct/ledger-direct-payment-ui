@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "base_asset": "XRP",
+  "amount_requested": 0.74791,
+  "state": "expired",
+  "amount_paid": null,
+  "shortfall": null,
+  "seconds_left": null
+}

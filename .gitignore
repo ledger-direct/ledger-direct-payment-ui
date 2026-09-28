@@ -1,0 +1,4 @@
+node_modules/
+.DS_Store
+.idea/
+# dist/ is committed on purpose: plugins without a bundler copy it.

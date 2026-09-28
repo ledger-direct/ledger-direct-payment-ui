@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "state": "wrong_asset",
+  "base_asset": "USDC",
+  "amount_requested": {
+    "currency": "5553444300000000000000000000000000000000",
+    "value": "1.14",
+    "issuer": "rHuGNhqTG32mfmAvWA8hUyWRLV3tCSwKQt"
+  },
+  "amount_paid": {
+    "currency": "524C555344000000000000000000000000000000",
+    "value": "1.14",
+    "issuer": "rQhWct2fv4Vc4KRjRgMrxa8xPN9Zx9iLKV"
+  },
+  "shortfall": {
+    "currency": "5553444300000000000000000000000000000000",
+    "value": "1.14",
+    "issuer": "rHuGNhqTG32mfmAvWA8hUyWRLV3tCSwKQt"
+  },
+  "seconds_left": null
+}
