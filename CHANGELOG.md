@@ -1,3 +1,19 @@
+# 0.2.0
+
+The contract learns which chain the page is for, so the same page serves Stellar (core 0.10.0):
+
+- `data-ld-chain` on the root: `XRPL` or `STELLAR`; absent means `XRPL`, so every existing template keeps its
+  behaviour.
+- The browser-wallet section is XRPL's. `wallets.js` wires nothing on another chain and hides the section;
+  `payment-page.js` keeps it hidden across state changes. Stellar wallets are a later module, not this one.
+- Documented: `[data-ld-tag]` is the order identifier as shown — destination tag on XRPL, memo id on Stellar — the one
+  slot the end-to-end harness reads on both chains; `data-ld-amount-drops`, `data-ld-currency` and `data-ld-issuer`
+  are XRPL-only and read by `wallets.js` alone; `data-ld-payment-uri` may carry a SEP-0007 request, `qr.js` renders
+  whatever it is given.
+- Test: the wallet module stays out on a Stellar page and starts on an XRPL one or without the attribute.
+
+No behaviour changes for an XRPL page. `dist/` rebuilt.
+
 # 0.1.1
 
 - Relative imports in `src/payment-page.js` name their file extension (`./qr.js`, `./wallets.js`). The

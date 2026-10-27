@@ -1,5 +1,8 @@
 /**
- * Browser wallets over XRPL Connect (XRPL Commons, MIT).
+ * Browser wallets over XRPL Connect (XRPL Commons, MIT) — XRPL only. A page
+ * whose `data-ld-chain` names another chain (Stellar) gets no wallet UI from
+ * this module: the section is hidden and nothing is wired. Stellar wallets
+ * are a module of their own, when they come.
  *
  * Loaded only when the customer opens the wallet list: the library and its
  * xrpl peer are a megabyte the page must not carry for everyone who pays by
@@ -30,6 +33,10 @@ const AVAILABILITY_TIMEOUT_MS = 4000;
 export function startWallets(root, options = {}) {
     const section = root.querySelector('[data-ld-wallet-section]');
     if (!section) {
+        return;
+    }
+    if ((root.getAttribute('data-ld-chain') || 'XRPL') !== 'XRPL') {
+        section.hidden = true;
         return;
     }
     const loadLibrary = options.loadLibrary || (() => import('xrpl-connect'));

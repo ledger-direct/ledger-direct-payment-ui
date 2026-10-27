@@ -64,6 +64,10 @@ export function startPaymentPage(root, options = {}) {
     const pollUrl = root.getAttribute('data-ld-poll-url');
     const quoteSeconds = parseInt(root.getAttribute('data-ld-quote-seconds'), 10);
     const explorerBase = root.getAttribute('data-ld-explorer-base') || '';
+    // The browser-wallet section is XRPL's (XRPL Connect); on another chain
+    // it stays hidden whatever the state. Absent means XRPL, as every page
+    // before the attribute existed.
+    const walletsApply = (root.getAttribute('data-ld-chain') || 'XRPL') === 'XRPL';
 
     let state = root.getAttribute('data-ld-state') || 'waiting';
     let secondsLeft = parseInt(root.getAttribute('data-ld-seconds-left'), 10);
@@ -105,7 +109,7 @@ export function startPaymentPage(root, options = {}) {
             qrVoid.hidden = next !== 'expired';
         }
         $$('[data-ld-wallet-section]').forEach((el) => {
-            el.hidden = next === 'expired';
+            el.hidden = !walletsApply || next === 'expired';
         });
         root.dispatchEvent(new CustomEvent('ld:state', { detail: { state: next } }));
     }
