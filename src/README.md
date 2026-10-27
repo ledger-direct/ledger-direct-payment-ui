@@ -32,12 +32,13 @@ Root element `.ld-page` with:
 | `data-ld-poll-url` | the status endpoint for this order, secret included; absent → no polling |
 | `data-ld-seconds-left` | integer, only in `waiting` with an expiry |
 | `data-ld-quote-seconds` | the quote's full validity, for the countdown bar |
-| `data-ld-asset` | the asset label as shown next to amounts (`XRP`, `RLUSD`, `USDC`) |
+| `data-ld-chain` | `XRPL` or `STELLAR`; absent means `XRPL`. Decides which chain-specific modules apply: the browser-wallet section is XRPL's and stays hidden on any other chain |
+| `data-ld-asset` | the asset label as shown next to amounts (`XRP`, `RLUSD`, `USDC`; on Stellar `XLM`, `USDC`, `EURC`) |
 | `data-ld-network` | `mainnet` or `testnet` |
 | `data-ld-explorer-base` | URL prefix a transaction hash is appended to |
-| `data-ld-payment-uri` | the payment request the QR code encodes (built by the server; absent → no QR) |
-| `data-ld-amount-drops` | XRP only: the requested amount in drops, as a string |
-| `data-ld-currency`, `data-ld-issuer` | tokens only: the quoted currency hex code and issuer |
+| `data-ld-payment-uri` | the payment request the QR code encodes (built by the server; absent → no QR). The page renders whatever it is given: an XRPL request or a SEP-0007 `web+stellar:pay` request alike |
+| `data-ld-amount-drops` | XRP only, optional: the requested amount in drops, as a string; read by `wallets.js` alone |
+| `data-ld-currency`, `data-ld-issuer` | XRPL tokens only: the quoted currency hex code and issuer; read by `wallets.js` alone |
 | `data-ld-xaman-key`, `data-ld-wc-project` | optional wallet-app identifiers |
 | `data-ld-amount-requested` | the requested amount as a plain decimal, whatever `[data-ld-amount]` shows (in `partial` that is the shortfall); read by the end-to-end harness |
 | `data-ld-wallets-src` | classic build only: absolute URL of `dist/wallets.js`; absent → no browser wallets |
@@ -54,11 +55,11 @@ Inside the root:
 | `[data-ld-fiat] [data-ld-fiat-for="full|partial"]` | the fiat line for the two cases |
 | `[data-ld-paid]`, `[data-ld-shortfall]`, `[data-ld-progress]` | inside a state block: numbers and the progress bar the poll fills |
 | `[data-ld-timer]`, `[data-ld-countdown]`, `[data-ld-timer-bar]` | the countdown |
-| `[data-ld-account]`, `[data-ld-tag]`, `[data-ld-issuer]` | copy sources (`data-value` or text) |
+| `[data-ld-account]`, `[data-ld-tag]`, `[data-ld-issuer]` | copy sources (`data-value` or text). `[data-ld-tag]` is **the order identifier as shown**: the destination tag on XRPL, the memo id on Stellar — one slot, whatever the chain calls it; the label next to it is the platform's |
 | `[data-copy="amount|account|tag|issuer"]` | copy buttons, with `[data-ld-copy-label="idle|done"]` children |
 | `[data-ld-check-form]`, `[data-ld-check]`, `[data-ld-check-label="idle|busy"]`, `[data-ld-toast]` | the check button, its labels and the "nothing found yet" hint |
 | `[data-ld-qr-details]`, `[data-ld-qr]`, `[data-ld-qr-box]`, `[data-ld-qr-void]` | the QR code, collapsible on narrow screens, blurred in `expired`; `[data-ld-qr]` may carry `data-ld-qr-label`, the accessible name of the rendered code |
-| `[data-ld-wallet-section]` | browser-wallet UI; hidden in `expired` and, unless `[data-ld-wallet-mobile]`, on narrow screens |
+| `[data-ld-wallet-section]` | browser-wallet UI (XRPL only); hidden in `expired`, on any chain but `XRPL`, and, unless `[data-ld-wallet-mobile]`, on narrow screens |
 | `[data-ld-wallet-desktop]` with `[data-ld-wallet-toggle]`, `[data-ld-wallets]`, `[data-ld-wallet-list]` | the "pay with a browser wallet" button, the list it opens, and the element the detected wallets are rendered into; `[data-ld-wallet-status="loading|none|hint"]` are the three sentences around the list |
 | `[data-ld-wallet-app]` with `data-ld-wallet-id="xaman|walletconnect"` | the phone's "open in wallet app" button, rendered only when the merchant configured that identifier |
 | `[data-ld-wallet-message]` and `[data-ld-wallet-text="<key>"]` | where the module's messages appear, and the hidden server-rendered sentences it picks from: `found`, `confirm`, `submitted`, `error-unavailable`, `error-network`, `error-mismatch` (with `%network%`), `error-other`, `network-mainnet`, `network-testnet` |
@@ -66,7 +67,7 @@ Inside the root:
 
 The end-to-end harness (`ledger-direct-e2e`) reads the page through this contract only: `data-ld-state`,
 `data-ld-amount-requested` and `data-ld-asset` on the root, `[data-ld-account]` and `[data-ld-tag]` by their
-`data-value`. Platform-specific ids are not part of the contract.
+`data-value` — on Stellar `[data-ld-tag]` carries the memo id. Platform-specific ids are not part of the contract.
 
 ## Status payload
 
