@@ -67,9 +67,8 @@ test('the classic build reads data-ld-poll-headers as JSON', async () => {
 });
 
 test('the fixed headers are not overridden, and an unreadable attribute counts as none', async () => {
-  const overriding = await pollWith({ 'data-ld-poll-headers': '{"Accept":"text/html"}' }, { headers: { 'X-Requested-With': 'curl' } });
-  assert.equal(overriding.init.headers.Accept, 'application/json');
-  assert.equal(overriding.init.headers['X-Requested-With'], 'XMLHttpRequest');
+  const overriding = await pollWith({ 'data-ld-poll-headers': '{"Accept":"text/html","accept":"*/*"}' }, { headers: { 'x-requested-with': 'curl' } });
+  assert.deepEqual(overriding.init.headers, { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, 'in any spelling: header names are case-insensitive');
 
   for (const broken of ['not json', '["sw-access-key"]', '42']) {
     const { init } = await pollWith({ 'data-ld-poll-headers': broken }, {});

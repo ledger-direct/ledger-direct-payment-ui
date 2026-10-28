@@ -78,7 +78,16 @@ function pollHeaders(root, options) {
             // not JSON: the page polls as it always did
         }
     }
-    return { ...fromMarkup, ...(options.headers || {}), ...POLL_HEADERS };
+    const own = {};
+    const fixed = Object.keys(POLL_HEADERS).map((name) => name.toLowerCase());
+    for (const [name, value] of Object.entries({ ...fromMarkup, ...(options.headers || {}) })) {
+        // Header names are case-insensitive: an `accept` would not replace
+        // `Accept` but be sent alongside it, merged by the browser.
+        if (!fixed.includes(name.toLowerCase())) {
+            own[name] = String(value);
+        }
+    }
+    return { ...own, ...POLL_HEADERS };
 }
 
 /**
