@@ -30,6 +30,7 @@ Root element `.ld-page` with:
 |---|---|
 | `data-ld-state` | one of `waiting`, `partial`, `wrong_asset`, `expired` (a settled order never renders the page) |
 | `data-ld-poll-url` | the status endpoint for this order, secret included; absent → no polling |
+| `data-ld-poll-headers` | optional, classic build: a JSON object of headers sent with every poll on top of the fixed `Accept` and `X-Requested-With`, e.g. `{"sw-access-key":"SWSC…"}` for Shopware's Store API from a headless front end. A build that starts the page itself passes `options.headers` to `startPaymentPage()` instead; the fixed headers are never overridden |
 | `data-ld-seconds-left` | integer, only in `waiting` with an expiry |
 | `data-ld-quote-seconds` | the quote's full validity, for the countdown bar |
 | `data-ld-chain` | `XRPL` or `STELLAR`; absent means `XRPL`. Decides which chain-specific modules apply: the browser-wallet section is XRPL's and stays hidden on any other chain |

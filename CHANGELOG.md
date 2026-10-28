@@ -1,3 +1,17 @@
+# 0.3.0
+
+The poll can carry the platform's own headers, which a headless front end needs:
+
+- `startPaymentPage(root, { headers })` sends them with every poll on top of the fixed `Accept` and
+  `X-Requested-With`; the fixed two are never overridden. For the classic build the root takes
+  `data-ld-poll-headers`, a JSON object; an unreadable value counts as none.
+- The case: Shopware's Store API resolves the sales channel from `sw-access-key`, which the storefront route never
+  needed. The key is public in every shipped headless bundle, so the page may carry it.
+- `credentials: 'same-origin'` stays: access to the order is the secret in the poll URL, not a cookie.
+- Test: a poll carries the option's and the attribute's headers, and the fixed ones win.
+
+No behaviour changes for a page without the option or the attribute. `dist/` rebuilt.
+
 # 0.2.0
 
 The contract learns which chain the page is for, so the same page serves Stellar (core 0.10.0):
