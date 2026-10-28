@@ -53,9 +53,47 @@ function share(paid, requested) {
     return Math.max(0, Math.min(100, Math.round((p / r) * 100)));
 }
 
+/** The headers every poll carries. A platform's own headers come on top; these are not overridden. */
+const POLL_HEADERS = { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
+
+/**
+ * The platform's own headers for the poll: `options.headers` for a build that
+ * starts the page itself, `data-ld-poll-headers` (a JSON object) for the
+ * classic build. A headless front end needs this where the platform's API
+ * identifies the storefront by a header the server-rendered page never had
+ * to send. An unreadable attribute counts as no headers.
+ *
+ * @returns {Record<string, string>}
+ */
+function pollHeaders(root, options) {
+    let fromMarkup = {};
+    const attribute = root.getAttribute('data-ld-poll-headers');
+    if (attribute) {
+        try {
+            const parsed = JSON.parse(attribute);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                fromMarkup = parsed;
+            }
+        } catch {
+            // not JSON: the page polls as it always did
+        }
+    }
+    const own = {};
+    const fixed = Object.keys(POLL_HEADERS).map((name) => name.toLowerCase());
+    for (const [name, value] of Object.entries({ ...fromMarkup, ...(options.headers || {}) })) {
+        // Header names are case-insensitive: an `accept` would not replace
+        // `Accept` but be sent alongside it, merged by the browser.
+        if (!fixed.includes(name.toLowerCase())) {
+            own[name] = String(value);
+        }
+    }
+    return { ...own, ...POLL_HEADERS };
+}
+
 /**
  * @param {HTMLElement} root the `.ld-page` element
- * @param {{ loadLibrary?: () => Promise<unknown> }} options passed on to startWallets()
+ * @param {{ loadLibrary?: () => Promise<unknown>, headers?: Record<string, string> }} options
+ *   `headers` are sent with every poll on top of the fixed ones; `loadLibrary` is passed on to startWallets()
  */
 export function startPaymentPage(root, options = {}) {
     const $ = (selector, scope = root) => scope.querySelector(selector);
@@ -64,6 +102,7 @@ export function startPaymentPage(root, options = {}) {
     const pollUrl = root.getAttribute('data-ld-poll-url');
     const quoteSeconds = parseInt(root.getAttribute('data-ld-quote-seconds'), 10);
     const explorerBase = root.getAttribute('data-ld-explorer-base') || '';
+    const headers = pollHeaders(root, options);
     // The browser-wallet section is XRPL's (XRPL Connect); on another chain
     // it stays hidden whatever the state. Absent means XRPL, as every page
     // before the attribute existed.
@@ -288,10 +327,10 @@ export function startPaymentPage(root, options = {}) {
     }
 
     async function requestStatus() {
-        const response = await fetch(pollUrl, {
-            credentials: 'same-origin',
-            headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-        });
+        // same-origin credentials stay: access runs over the secret in the
+        // poll URL, cookies are not needed, and across origins the browser
+        // would not send them anyway.
+        const response = await fetch(pollUrl, { credentials: 'same-origin', headers });
         if (!response.ok) {
             return null;
         }

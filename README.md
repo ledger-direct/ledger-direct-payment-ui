@@ -32,10 +32,24 @@ startPaymentPage(document.querySelector('[data-ld-page]'));
 
 The wallet library becomes a code-split chunk of your build, loaded when the customer opens the wallet list.
 
+`startPaymentPage(root, options)` takes `options.headers`, sent with every poll of `data-ld-poll-url` on top of
+the fixed `Accept` and `X-Requested-With`. A headless front end on Shopware needs this: the Store API resolves
+the sales channel from `sw-access-key`, which is public in every shipped bundle anyway, so the page may carry it:
+
+```js
+startPaymentPage(root, { headers: { 'sw-access-key': accessKey } });
+```
+
+Access to the order itself is the secret in the poll URL, not a cookie, so `credentials: 'same-origin'` stays and
+the poll works across origins — provided the status endpoint answers the cross-origin request with CORS headers
+that allow the origin and the headers sent. Shopware's Store API does (`Access-Control-Allow-Origin: *`, the
+`sw-*` headers allowed, on the plugin's routes as on the core's); another platform's endpoint has to do the same.
+
 **Without a bundler** (PrestaShop, WooCommerce, Magento): copy `dist/payment-page.js`, `dist/payment-page.css`
 and `dist/wallets.js` into the module and register the first two as ordinary assets. `dist/payment-page.js`
 starts every `[data-ld-page]` on `DOMContentLoaded`. Put the URL of `dist/wallets.js` into
-`data-ld-wallets-src`; it is fetched by a native `import()` only when needed. `dist/` is committed and tagged,
+`data-ld-wallets-src`; it is fetched by a native `import()` only when needed. Headers for the poll go into
+`data-ld-poll-headers` as a JSON object. `dist/` is committed and tagged,
 so a module pins a version by copying it.
 
 | File | Size | Loaded |
