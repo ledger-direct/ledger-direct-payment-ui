@@ -25,10 +25,12 @@
   // ?requirejs=1 puts RequireJS on the page, as every Magento page has it: a global `define`
   // with `define.amd`, which the UMD wrappers of bundled dependencies used to register with.
   // With it the wallet list has to find the installed wallets exactly as without it (0.3.1).
+  // Written into the document while it is parsed, so the browser fetches and runs it before
+  // the bundle at the end of the body: an appended <script> would load asynchronously and
+  // could arrive after both bundles, and the fixture would pass without exercising the case.
   if (params.get('requirejs')) {
-    const requirejs = document.createElement('script');
-    requirejs.src = 'https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.7/require.min.js';
-    document.head.appendChild(requirejs);
+    document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.7/require.min.js" '
+      + 'onerror="document.title = \'FIXTURE BROKEN: RequireJS did not load\'; document.body.insertAdjacentHTML(\'afterbegin\', \'<p style=&quot;background:#b00;color:#fff;padding:8px&quot;>RequireJS did not load — this run proves nothing about the Magento case.</p>\')"><\/script>');
   }
   document.addEventListener('DOMContentLoaded', () => {
     const root = document.querySelector('[data-ld-page]');
