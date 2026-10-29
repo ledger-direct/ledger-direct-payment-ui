@@ -80,7 +80,8 @@ npm run serve     # http://localhost:8765/?state=waiting — the fixture, all st
 
 The fixture (`test/fixture/`) renders the contract with example values and answers the poll from
 `status/<state>.json`; `?state=partial&then=settled` shows the transition into the success view. Browser wallets
-work in the fixture too, against whatever extensions the browser has.
+work in the fixture too, against whatever extensions the browser has. `?requirejs=1` adds RequireJS to the page,
+the way every Magento page has it — the wallet list must find the same wallets with and without it (0.3.1).
 
 `dist/` is committed; CI fails when it is stale.
 

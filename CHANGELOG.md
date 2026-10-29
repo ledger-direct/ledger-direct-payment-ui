@@ -1,3 +1,19 @@
+# 0.3.1
+
+The classic build works on a page that has RequireJS, which every Magento page has:
+
+- RequireJS makes `define` a global function with `define.amd`. The UMD wrappers of bundled
+  dependencies (cross-fetch inside the Xaman SDK, qrcode-generator) test for exactly that and, on
+  such a page, registered with RequireJS instead of exporting to CommonJS — the bundle saw an empty
+  module and the wallet library failed with `default is not a function` the moment the customer
+  opened the wallet list; the page reported "no browser wallet found" with Crossmark and GemWallet
+  installed. Both bundles are now built with the `define` identifier replaced, so every wrapper
+  takes its CommonJS branch on any page. Nothing is declared in the page's global scope.
+- Test: neither dist file tests for `define` or reads `define.amd`; the classic bundle declares no
+  global `require` or `define`.
+
+No change for a bundler build (Shopware's webpack does not use `dist/`).
+
 # 0.3.0
 
 The poll can carry the platform's own headers, which a headless front end needs:
