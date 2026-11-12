@@ -1,3 +1,20 @@
+# 0.4.0
+
+The wallet library is the stable release:
+
+- xrpl-connect 1.0.0 instead of the release candidate 1.0.0-rc.2, with xrpl 5.3.0 (xrpl-connect
+  1.0.0-rc.2 accepted only xrpl 3 or 4). Among the library's changes: the Xaman adapter submits to
+  the ledger under its own control and validates the resolved payload more strictly, wallet
+  availability checks time out instead of hanging, and a MetaMask Snap adapter is new. The page's
+  calls (`WalletManager`, `connect`, `disconnect`, `signAndSubmit`, `getAvailableWallets`, the
+  adapter classes) are unchanged.
+- The runtime dependencies no longer include node-forge (it came with @crossmarkio/typings, which
+  xrpl-connect 1.0.0 no longer needs); `npm audit` reports nothing.
+- Built with esbuild 0.28. `dist/payment-page.js` and `dist/payment-page.css` are byte-identical;
+  `dist/wallets.js` grows from 1.65 MB to 1.79 MB.
+
+The plugins take 0.4.0 with their next release, after a browser test with the wallets.
+
 # 0.3.1
 
 The classic build works on a page that has RequireJS, which every Magento page has:
