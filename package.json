@@ -31,7 +31,7 @@
   "dependencies": {
     "qrcode-generator": "^2.0.4",
     "xrpl": "^4.6.0",
-    "xrpl-connect": "1.0.0-rc.2"
+    "xrpl-connect": "1.0.0"
   },
   "devDependencies": {
     "esbuild": "^0.25.0"
