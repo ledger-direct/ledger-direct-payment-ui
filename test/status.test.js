@@ -150,3 +150,20 @@ test('answers in the order they were asked are both applied', async () => {
   });
   assert.deepEqual(root.amounts, ['0.5', '0.2']);
 });
+
+test('a newer request that failed does not drop an older answer that arrived', async () => {
+  const root = fakePage({ amount: '0.74791', state: 'waiting' });
+  const pending = [];
+  const fetch = () => new Promise((resolve) => { pending.push(resolve); });
+  await withFetch(fetch, async () => {
+    const page = startPaymentPage(root);
+    const a = page.checkNow();
+    const b = page.checkNow();
+    pending[1]({ ok: false, json: async () => null }); // the newer one gets a 503
+    await b;
+    pending[0]({ ok: true, json: async () => partial(0.2) });
+    await a;
+    assert.equal(page.amountDue, '0.2');
+  });
+  assert.deepEqual(root.amounts, ['0.2']);
+});

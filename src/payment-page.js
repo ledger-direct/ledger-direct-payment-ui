@@ -361,7 +361,11 @@ export function startPaymentPage(root, options = {}) {
         if (number < applied) {
             return SUPERSEDED;
         }
-        applied = number;
+        // A failed request answers nothing, so it overtakes nothing: an older
+        // answer that does arrive is still the newest the page has.
+        if (payload !== null) {
+            applied = number;
+        }
         return payload;
     }
 
