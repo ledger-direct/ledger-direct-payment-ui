@@ -54,12 +54,18 @@ export function startWallets(root, options = {}) {
     let manager = null;
     let amountStale = false;
 
+    // A token payment reads its value from the displayed amount when the
+    // transaction is built, and the page keeps that current: nothing to reload.
+    const paysInDrops = !(root.getAttribute('data-ld-currency') && root.getAttribute('data-ld-issuer'));
+
     root.addEventListener('ld:amount', () => {
         // The XRP amount in drops was rendered by the server for the amount
         // shown at load time; after a partial payment the shortfall is due and
         // the server has to render the drops for it — the page reloads before
         // a wallet payment rather than converting in the browser.
-        amountStale = true;
+        if (paysInDrops) {
+            amountStale = true;
+        }
     });
 
     /* ---- messages ---- */
@@ -200,9 +206,30 @@ export function startWallets(root, options = {}) {
         }
     }
 
-    async function pay(walletId) {
+    /**
+     * Whether the transaction about to be built is no longer the one to sign.
+     * Asked on the click and again once the wallet is connected: loading the
+     * library and confirming the connection can take minutes, and a payment
+     * from elsewhere may arrive meanwhile. Stale drops reload the page, as
+     * before the wallet was asked; a page that is settled or expired is not
+     * paid at all. A payment arriving while the wallet shows its signing
+     * dialog is beyond the page's reach.
+     */
+    function mustNotSign() {
         if (amountStale) {
             window.location.reload();
+            return true;
+        }
+        const state = root.getAttribute('data-ld-state');
+        if (state === 'settled' || state === 'expired') {
+            say('');
+            return true;
+        }
+        return false;
+    }
+
+    async function pay(walletId) {
+        if (mustNotSign()) {
             return;
         }
         say('confirm');
@@ -215,6 +242,9 @@ export function startWallets(root, options = {}) {
                 // Not every adapter checks this itself, so the page does.
                 await disconnectQuietly(m);
                 say('error-mismatch', { network: text('network-' + network) || network });
+                return;
+            }
+            if (mustNotSign()) {
                 return;
             }
             const transaction = transactionFor(account.address);

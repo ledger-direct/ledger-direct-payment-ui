@@ -1,3 +1,23 @@
+# 0.4.1
+
+Three fixes from a review of 0.4.0; all three were in the package since 0.1.0 and affect every
+plugin that takes the payment page from it:
+
+- **The shortfall can be paid by wallet.** Every poll in the `partial` state fired `ld:amount`,
+  even with an unchanged shortfall; the wallet module took each as stale drops, so within eight
+  seconds of every reload the next wallet click only reloaded again. `ld:amount` now fires only
+  when the amount to send changes. A token payment no longer reloads at all after a partial
+  payment: its value is read from the displayed amount, which the page keeps current.
+- **A wallet payment checks the page again once the wallet is connected.** Loading the library and
+  confirming the connection can take minutes. A partial payment arriving meanwhile left the XRP
+  transaction with the drops from page load (the customer overpaid); now the page reloads first,
+  as it does on the click. A page that turned `settled` or `expired` meanwhile signs nothing.
+- **An overtaken status answer is dropped.** A background poll and a check could be in flight
+  together; an older answer arriving last turned the amount, the QR code or a settled page back.
+
+`dist/payment-page.css` and `dist/wallets.js` (the wallet library alone) are byte-identical; the
+changes are in `dist/payment-page.js`, which carries the page and the wallet module.
+
 # 0.4.0
 
 The wallet library is the stable release:

@@ -85,4 +85,10 @@ a number as `String(n)`, a token amount by its `value` — never rounded or refo
 ## Events
 
 The root dispatches `ld:state` (`detail.state`) and `ld:amount` (`detail.amount`) so an optional
-module (QR rendering, wallets) can follow the page without the page knowing about it.
+module (QR rendering, wallets) can follow the page without the page knowing about it. `ld:amount`
+fires when the amount to send changes, not on every poll: a partial payment answered with the same
+shortfall again fires nothing. The comparison is of the strings as rendered and received, so in the
+`partial` state `[data-ld-amount]` carries the shortfall as the same plain decimal the poll sends.
+
+When a poll and a check are in flight together, an answer that arrives after a newer one has been
+applied is dropped.

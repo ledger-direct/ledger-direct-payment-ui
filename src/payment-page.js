@@ -27,6 +27,9 @@ import { startWallets } from './wallets.js';
 const POLL_INTERVAL_MS = 8000;
 const REDIRECT_DELAY_S = 5;
 
+/** An answer a newer one has overtaken: dropped, not read as "nothing new". */
+const SUPERSEDED = Symbol('superseded');
+
 /**
  * The only "formatting" in this script, and the same rule the server uses:
  * the plain decimal the core states — a native amount arrives as a number,
@@ -112,6 +115,8 @@ export function startPaymentPage(root, options = {}) {
     let secondsLeft = parseInt(root.getAttribute('data-ld-seconds-left'), 10);
     let amountDue = $('[data-ld-amount]') ? $('[data-ld-amount]').textContent.trim() : '';
     let pollTimer = null;
+    let requested = 0;
+    let applied = 0;
     let countdownTimer = null;
     let redirectTimer = null;
 
@@ -155,7 +160,18 @@ export function startPaymentPage(root, options = {}) {
 
     /* ---- amounts ---- */
 
+    /**
+     * `ld:amount` means the amount to send changed. A partial payment is
+     * answered with the same shortfall on every poll; announcing it each
+     * time told the wallet module the drops were stale again eight seconds
+     * after every reload, so the shortfall could not be paid by wallet. The
+     * comparison is of the strings the server states — the template's
+     * plain decimal against the payload's — nothing is computed.
+     */
     function setAmountDue(value) {
+        if (value === amountDue) {
+            return;
+        }
         amountDue = value;
         const el = $('[data-ld-amount]');
         if (el) {
@@ -326,15 +342,41 @@ export function startPaymentPage(root, options = {}) {
         return true;
     }
 
+    /**
+     * A background poll and a check (the button, or a wallet's ld:check) can
+     * be in flight together, and answers arrive in any order. Requests are
+     * numbered; an answer older than one already applied is SUPERSEDED and
+     * must not be applied — it would turn the amount, the QR code or a
+     * settled page back. Nor may it count as null ("nothing new, keep
+     * polling"): after settled that would restart the polling. The newer
+     * answer has already decided whether to poll on.
+     */
     async function requestStatus() {
+        const number = ++requested;
         // same-origin credentials stay: access runs over the secret in the
         // poll URL, cookies are not needed, and across origins the browser
         // would not send them anyway.
-        const response = await fetch(pollUrl, { credentials: 'same-origin', headers });
-        if (!response.ok) {
-            return null;
+        let payload;
+        try {
+            const response = await fetch(pollUrl, { credentials: 'same-origin', headers });
+            payload = response.ok ? await response.json() : null;
+        } catch (error) {
+            // An overtaken request is dropped however it ended; a current
+            // one that failed goes to the caller, which polls on as before.
+            if (number < applied) {
+                return SUPERSEDED;
+            }
+            throw error;
         }
-        return response.json();
+        if (number < applied) {
+            return SUPERSEDED;
+        }
+        // A failed request answers nothing, so it overtakes nothing: an older
+        // answer that does arrive is still the newest the page has.
+        if (payload !== null) {
+            applied = number;
+        }
+        return payload;
     }
 
     function schedulePoll() {
@@ -354,6 +396,9 @@ export function startPaymentPage(root, options = {}) {
         } catch {
             // A failed poll is not worth surfacing — the next one may well
             // work, and the platform's safety net is the actual guarantee.
+        }
+        if (payload === SUPERSEDED) {
+            return;
         }
         if (applyStatus(payload)) {
             schedulePoll();
@@ -390,6 +435,9 @@ export function startPaymentPage(root, options = {}) {
         $$('[data-ld-check-label]').forEach((el) => {
             el.hidden = el.getAttribute('data-ld-check-label') !== 'idle';
         });
+        if (payload === SUPERSEDED) {
+            return;
+        }
         const keepPolling = applyStatus(payload);
         if (toast && payload && payload.state === stateBefore && payload.state !== 'settled') {
             toast.hidden = false;
