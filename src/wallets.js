@@ -206,9 +206,30 @@ export function startWallets(root, options = {}) {
         }
     }
 
-    async function pay(walletId) {
+    /**
+     * Whether the transaction about to be built is no longer the one to sign.
+     * Asked on the click and again once the wallet is connected: loading the
+     * library and confirming the connection can take minutes, and a payment
+     * from elsewhere may arrive meanwhile. Stale drops reload the page, as
+     * before the wallet was asked; a page that is settled or expired is not
+     * paid at all. A payment arriving while the wallet shows its signing
+     * dialog is beyond the page's reach.
+     */
+    function mustNotSign() {
         if (amountStale) {
             window.location.reload();
+            return true;
+        }
+        const state = root.getAttribute('data-ld-state');
+        if (state === 'settled' || state === 'expired') {
+            say('');
+            return true;
+        }
+        return false;
+    }
+
+    async function pay(walletId) {
+        if (mustNotSign()) {
             return;
         }
         say('confirm');
@@ -221,6 +242,9 @@ export function startWallets(root, options = {}) {
                 // Not every adapter checks this itself, so the page does.
                 await disconnectQuietly(m);
                 say('error-mismatch', { network: text('network-' + network) || network });
+                return;
+            }
+            if (mustNotSign()) {
                 return;
             }
             const transaction = transactionFor(account.address);
