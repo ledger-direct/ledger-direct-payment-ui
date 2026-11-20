@@ -356,8 +356,18 @@ export function startPaymentPage(root, options = {}) {
         // same-origin credentials stay: access runs over the secret in the
         // poll URL, cookies are not needed, and across origins the browser
         // would not send them anyway.
-        const response = await fetch(pollUrl, { credentials: 'same-origin', headers });
-        const payload = response.ok ? await response.json() : null;
+        let payload;
+        try {
+            const response = await fetch(pollUrl, { credentials: 'same-origin', headers });
+            payload = response.ok ? await response.json() : null;
+        } catch (error) {
+            // An overtaken request is dropped however it ended; a current
+            // one that failed goes to the caller, which polls on as before.
+            if (number < applied) {
+                return SUPERSEDED;
+            }
+            throw error;
+        }
         if (number < applied) {
             return SUPERSEDED;
         }

@@ -167,3 +167,36 @@ test('a newer request that failed does not drop an older answer that arrived', a
   });
   assert.deepEqual(root.amounts, ['0.2']);
 });
+
+/*
+ * The other half of the rule: an overtaken request that fails — the fetch
+ * rejects, or the body is not JSON — is dropped just like one that answers.
+ * Read as "nothing new" it would schedule a poll after settled.
+ */
+for (const [name, failure] of [
+  ['the fetch rejects', (resolve, reject) => reject(new TypeError('network'))],
+  ['the body is not JSON', (resolve) => resolve({ ok: true, json: async () => { throw new SyntaxError('not JSON'); } })],
+]) {
+  test(`an overtaken request that fails (${name}) does not restart polling after settled`, async () => {
+    mock.timers.enable({ apis: ['setTimeout', 'setInterval'] });
+    try {
+      const root = fakePage({ state: 'waiting', pollUrl: '/poll' });
+      const pending = [];
+      const fetch = () => new Promise((resolve, reject) => { pending.push({ resolve, reject }); });
+      await withFetch(fetch, async () => {
+        startPaymentPage(root);
+        mock.timers.tick(8000); // the background poll is in flight
+        root.form.listeners.submit({ preventDefault() {} });
+        pending[1].resolve({ ok: true, json: async () => settled });
+        await settle();
+        failure(pending[0].resolve, pending[0].reject);
+        await settle();
+        assert.equal(root.getAttribute('data-ld-state'), 'settled');
+        mock.timers.tick(8000);
+        assert.equal(pending.length, 2, 'no poll was scheduled after settled');
+      });
+    } finally {
+      mock.timers.reset();
+    }
+  });
+}
