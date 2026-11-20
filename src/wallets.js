@@ -54,12 +54,18 @@ export function startWallets(root, options = {}) {
     let manager = null;
     let amountStale = false;
 
+    // A token payment reads its value from the displayed amount when the
+    // transaction is built, and the page keeps that current: nothing to reload.
+    const paysInDrops = !(root.getAttribute('data-ld-currency') && root.getAttribute('data-ld-issuer'));
+
     root.addEventListener('ld:amount', () => {
         // The XRP amount in drops was rendered by the server for the amount
         // shown at load time; after a partial payment the shortfall is due and
         // the server has to render the drops for it — the page reloads before
         // a wallet payment rather than converting in the browser.
-        amountStale = true;
+        if (paysInDrops) {
+            amountStale = true;
+        }
     });
 
     /* ---- messages ---- */
