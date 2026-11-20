@@ -155,7 +155,18 @@ export function startPaymentPage(root, options = {}) {
 
     /* ---- amounts ---- */
 
+    /**
+     * `ld:amount` means the amount to send changed. A partial payment is
+     * answered with the same shortfall on every poll; announcing it each
+     * time told the wallet module the drops were stale again eight seconds
+     * after every reload, so the shortfall could not be paid by wallet. The
+     * comparison is of the strings the server states — the template's
+     * plain decimal against the payload's — nothing is computed.
+     */
     function setAmountDue(value) {
+        if (value === amountDue) {
+            return;
+        }
         amountDue = value;
         const el = $('[data-ld-amount]');
         if (el) {
