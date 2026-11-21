@@ -1,3 +1,16 @@
+# 0.4.2
+
+- **The page leaves once.** The button on the success view and the countdown both went to the
+  shop's return URL, and a click did not stop the countdown; a wallet reporting its transaction
+  after `settled` started the countdown again. Shopware's return URL invalidates its payment token
+  on the first request, so the second navigation, which overtook the first, ended on an error page
+  (`CHECKOUT__PAYMENT_TOKEN_INVALIDATED`) instead of the order confirmation. The order itself was
+  paid. Now every way out — the countdown, the button, a `redirect` for an order that stopped
+  waiting — navigates at most once, and nothing is polled or applied after that.
+
+`dist/payment-page.css` and `dist/wallets.js` are byte-identical; the change is in
+`dist/payment-page.js`.
+
 # 0.4.1
 
 Three fixes from a review of 0.4.0; all three were in the package since 0.1.0 and affect every
