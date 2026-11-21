@@ -19,6 +19,10 @@ plus the platform's `redirect`). A platform that renders the contract gets the p
 
 ## Using it
 
+Published to npm as `@ledger-direct/payment-ui` on every version tag (`.github/workflows/publish.yml`), with
+provenance. A platform with a bundler depends on `"@ledger-direct/payment-ui": "^0.2"`; until the first npm
+publish, the Git tag works the same way: `"github:ledger-direct/ledger-direct-payment-ui#0.2.0"`.
+
 **With a bundler** (Shopware's storefront build):
 
 ```js
