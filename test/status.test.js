@@ -200,3 +200,125 @@ for (const [name, failure] of [
     }
   });
 }
+
+/* ---- the page leaves once ---- */
+
+/*
+ * The redirect can be single-use: Shopware's finalize URL invalidates its
+ * payment token on the first request. A second navigation started before the
+ * first has loaded wins and ends on the error page — seen with the button
+ * clicked as the countdown ran out.
+ */
+function settledPage({ secondsLeft = null } = {}) {
+  const root = fakePage({ state: 'waiting', pollUrl: '/poll' });
+  if (secondsLeft !== null) root.setAttribute('data-ld-seconds-left', String(secondsLeft));
+  const countdown = { textContent: '' };
+  const listeners = {};
+  const link = {
+    href: '/account/order',
+    addEventListener(type, fn) { listeners[type] = fn; },
+    click() {
+      const event = { defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+      listeners.click(event);
+      return event.defaultPrevented ? null : this.href;
+    },
+  };
+  const count = { textContent: '' };
+  const success = {
+    hidden: true,
+    querySelector: (selector) => {
+      if (selector === '[data-ld-redirect-link]') return link;
+      if (selector === '[data-ld-redirect-count]') return count;
+      return null;
+    },
+    querySelectorAll: () => [],
+  };
+  const rootEvents = {};
+  const lookup = root.querySelector;
+  root.querySelector = (selector) => {
+    if (selector === '[data-ld-success]') return success;
+    if (selector === '[data-ld-redirect-link]') return link;
+    if (selector === '[data-ld-countdown]') return countdown;
+    return lookup(selector);
+  };
+  root.addEventListener = (type, fn) => { rootEvents[type] = fn; };
+  root.link = link;
+  root.fire = (type) => rootEvents[type]();
+  return root;
+}
+
+const finalize = '/payment/finalize-transaction?_sw_payment_token=t';
+
+/** Runs the page with a window whose navigations are counted. */
+async function leaving(run) {
+  const visits = [];
+  const originalWindow = globalThis.window;
+  globalThis.window = { location: { set href(url) { visits.push(url); }, get href() { return ''; } } };
+  mock.timers.enable({ apis: ['setTimeout', 'setInterval'] });
+  try {
+    await run(visits);
+  } finally {
+    mock.timers.reset();
+    globalThis.window = originalWindow;
+  }
+  return visits;
+}
+
+test('the button clicked during the countdown is the only navigation', async () => {
+  const navigations = [];
+  const visits = await leaving(async () => {
+    const root = settledPage();
+    await withFetch(async () => ({ ok: true, json: async () => ({ ...settled, redirect: finalize }) }), async () => {
+      startPaymentPage(root);
+      mock.timers.tick(8000);
+      await settle();
+      mock.timers.tick(4000);
+      navigations.push(root.link.click());
+      mock.timers.tick(5000);
+      navigations.push(root.link.click()); // a second click is not a second request
+    });
+  });
+  assert.deepEqual(visits, []);
+  assert.deepEqual(navigations, [finalize, null]);
+});
+
+test('the countdown leaves once, even when a wallet asks again after settled', async () => {
+  let requests = 0;
+  const visits = await leaving(async () => {
+    const root = settledPage();
+    await withFetch(async () => { requests++; return { ok: true, json: async () => ({ ...settled, redirect: finalize }) }; }, async () => {
+      startPaymentPage(root);
+      mock.timers.tick(8000);
+      await settle();
+      root.fire('ld:check'); // the wallet reports its transaction
+      await settle();
+      mock.timers.tick(5000);
+      root.fire('ld:check');
+      await settle();
+      mock.timers.tick(5000);
+    });
+  });
+  assert.deepEqual(visits, [finalize]);
+  assert.equal(requests, 2, 'the poll and the first ld:check; nothing once the page left');
+});
+
+test('a redirect for an order that stopped waiting is followed once, and the page stops', async () => {
+  const cancelled = { schema_version: 1, state: 'waiting', base_asset: 'XRP', amount_requested: 0.74791, amount_paid: 0, shortfall: null, seconds_left: 3, redirect: '/account/order/edit/1' };
+  let requests = 0;
+  let root;
+  const visits = await leaving(async () => {
+    root = settledPage({ secondsLeft: 3 });
+    await withFetch(async () => { requests++; return { ok: true, json: async () => cancelled }; }, async () => {
+      startPaymentPage(root);
+      root.fire('ld:check');
+      await settle();
+      root.fire('ld:check');
+      await settle();
+      mock.timers.tick(8000); // the quote would have expired meanwhile
+      await settle();
+    });
+  });
+  assert.deepEqual(visits, ['/account/order/edit/1']);
+  assert.equal(requests, 1, 'no request once the page left');
+  assert.equal(root.getAttribute('data-ld-state'), 'waiting', 'the quote countdown stopped with the page');
+});

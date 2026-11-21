@@ -79,7 +79,10 @@ The end-to-end harness (`ledger-direct-e2e`) reads the page through this contrac
  "amount_paid":0.5,"shortfall":0.35635,"seconds_left":null}
 ```
 
-Only a `redirect` or `settled` stops the polling. Amounts are inserted exactly as received —
+Only a `redirect` or `settled` stops the polling. The page navigates to a `redirect` once —
+after the countdown, or when the customer clicks `[data-ld-redirect-link]`, whichever comes first —
+so a single-use return URL (a payment token the shop invalidates on its first request) works.
+Amounts are inserted exactly as received —
 a number as `String(n)`, a token amount by its `value` — never rounded or reformatted in the browser.
 
 ## Events

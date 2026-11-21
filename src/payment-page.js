@@ -119,6 +119,7 @@ export function startPaymentPage(root, options = {}) {
     let applied = 0;
     let countdownTimer = null;
     let redirectTimer = null;
+    let leaving = false;
 
     /* ---- state blocks ---- */
 
@@ -240,13 +241,35 @@ export function startPaymentPage(root, options = {}) {
 
     /* ---- success and redirect ---- */
 
+    /**
+     * The page leaves once. The redirect may be single-use — a shop's
+     * return URL can carry a token that its first request invalidates — so
+     * a second navigation, started before the first has loaded, ends on an
+     * error page instead of the order confirmation.
+     */
+    function leave(url) {
+        if (leaving) {
+            return;
+        }
+        stopForLeaving();
+        window.location.href = url;
+    }
+
+    /** Nothing runs once the page leaves: no countdown, no redirect timer, no poll. */
+    function stopForLeaving() {
+        leaving = true;
+        clearInterval(redirectTimer);
+        clearInterval(countdownTimer);
+        clearTimeout(pollTimer);
+    }
+
     function showSettled(payload) {
         clearInterval(countdownTimer);
         const open = $('[data-ld-open]');
         const success = $('[data-ld-success]');
         if (!success) {
             if (payload.redirect) {
-                window.location.href = payload.redirect;
+                leave(payload.redirect);
             }
             return;
         }
@@ -290,8 +313,7 @@ export function startPaymentPage(root, options = {}) {
                 count.textContent = String(Math.max(0, n));
             }
             if (n <= 0) {
-                clearInterval(redirectTimer);
-                window.location.href = payload.redirect;
+                leave(payload.redirect);
             }
         }, 1000);
     }
@@ -302,6 +324,9 @@ export function startPaymentPage(root, options = {}) {
      * @returns {boolean} whether to keep polling
      */
     function applyStatus(payload) {
+        if (leaving) {
+            return false;
+        }
         if (!payload) {
             return true;
         }
@@ -316,7 +341,7 @@ export function startPaymentPage(root, options = {}) {
         // stops the polling: a partial payment keeps polling so the top-up is
         // noticed, and an expired quote keeps polling so a late payment is.
         if (payload.redirect) {
-            window.location.href = payload.redirect;
+            leave(payload.redirect);
             return false;
         }
 
@@ -352,6 +377,10 @@ export function startPaymentPage(root, options = {}) {
      * answer has already decided whether to poll on.
      */
     async function requestStatus() {
+        // The page is leaving: no request, and nothing for the caller to apply.
+        if (leaving) {
+            return SUPERSEDED;
+        }
         const number = ++requested;
         // same-origin credentials stay: access runs over the secret in the
         // poll URL, cookies are not needed, and across origins the browser
@@ -488,6 +517,19 @@ export function startPaymentPage(root, options = {}) {
     const checkForm = $('[data-ld-check-form]');
     if (checkForm) {
         checkForm.addEventListener('submit', checkNow);
+    }
+
+    // The button on the success block goes where the countdown would: a click
+    // is the page leaving, so the countdown must not follow it.
+    const redirectLink = $('[data-ld-redirect-link]');
+    if (redirectLink) {
+        redirectLink.addEventListener('click', (event) => {
+            if (leaving) {
+                event.preventDefault();
+                return;
+            }
+            stopForLeaving();
+        });
     }
 
     // A wallet reported a submitted transaction: ask the server right away.
