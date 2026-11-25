@@ -23,11 +23,28 @@ function fakeRoot({ token = false } = {}) {
     getAttribute: () => 'xaman',
     addEventListener(type, fn) { this.click = fn; },
   };
-  const message = { textContent: '', hidden: true };
+  const message = {
+    textContent: '',
+    hidden: true,
+    attributes: {},
+    setAttribute(name, value) { this.attributes[name] = value; },
+    removeAttribute(name) { delete this.attributes[name]; },
+    hasAttribute(name) { return name in this.attributes; },
+  };
+  // The server-rendered sentences the module picks from, as a template renders them.
+  const texts = {
+    confirm: 'Confirm in your wallet',
+    submitted: 'Sent',
+    'error-mismatch': 'Switch to %network%',
+    'error-other': 'Failed',
+    'network-testnet': 'XRPL Testnet',
+  };
   const section = {
     querySelector: (selector) => {
       if (selector === '[data-ld-wallet-app]') return appButton;
       if (selector === '[data-ld-wallet-message]') return message;
+      const key = /^\[data-ld-wallet-text="(.+)"\]$/.exec(selector);
+      if (key && key[1] in texts) return { textContent: texts[key[1]] };
       return null;
     },
     querySelectorAll: () => [],
@@ -67,7 +84,7 @@ function fakeLibrary() {
   return {
     lib,
     signed,
-    confirm: () => confirm({ address: 'rCustomer', network: { id: 'testnet' } }),
+    confirm: (network = 'testnet') => confirm({ address: 'rCustomer', network: { id: network } }),
   };
 }
 
@@ -158,4 +175,43 @@ test('a token page pays the shortfall from a partial payment noticed before the 
   }
   assert.equal(reloads, 0);
   assert.equal(wallet.signed[0].Amount.value, '0.5');
+});
+
+/*
+ * What the customer reads after a wallet payment: an error is marked so the
+ * stylesheet sets it apart from the hint above it (it read like a continuation
+ * of that hint); a confirmation or a submitted payment is not.
+ */
+async function payOn(network, root = fakeRoot()) {
+  const wallet = fakeLibrary();
+  const originalWindow = globalThis.window;
+  globalThis.window = { location: { reload: () => {} } };
+  try {
+    startWallets(root, { loadLibrary: async () => wallet.lib });
+    const paying = root.appButton.click();
+    await settle();
+    assert.equal(root.message.textContent, 'Confirm in your wallet');
+    assert.equal(root.message.hasAttribute('data-ld-wallet-error'), false, 'asking to confirm is no error');
+    wallet.confirm(network);
+    await paying;
+  } finally {
+    globalThis.window = originalWindow;
+  }
+  return { root, signed: wallet.signed };
+}
+
+test('a wallet on another network shows the warning, marked as an error, and signs nothing', async () => {
+  const { root, signed } = await payOn('mainnet');
+  assert.equal(signed.length, 0);
+  assert.equal(root.message.textContent, 'Switch to XRPL Testnet');
+  assert.equal(root.message.hidden, false);
+  assert.equal(root.message.hasAttribute('data-ld-wallet-error'), true);
+});
+
+test('a submitted payment is no error, also right after one', async () => {
+  const { root } = await payOn('mainnet');
+  assert.equal(root.message.hasAttribute('data-ld-wallet-error'), true);
+  await payOn('testnet', root);
+  assert.equal(root.message.textContent, 'Sent');
+  assert.equal(root.message.hasAttribute('data-ld-wallet-error'), false);
 });

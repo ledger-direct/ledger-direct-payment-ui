@@ -7,9 +7,12 @@
   network than the order pays nothing. Joey knows no Xahau, and the wallet list is XRPL-only anyway.
   The provider calls it makes were tried by hand against the extension on the XRPL testnet, XRP and
   RLUSD, both settled.
+- **A wallet error stands out.** A wallet message that reports a problem — another network, a wallet that does
+  not respond, a failed payment — read like a continuation of the hint above it, in the same small grey type;
+  in a manual test it went unseen. `wallets.js` now marks it (`data-ld-wallet-error` on the message element)
+  and the stylesheet shows it as a warning box. No template changes: the attribute is set by the module.
 
-`dist/payment-page.js` changes (the adapter is part of the page script); `dist/wallets.js` and
-`dist/payment-page.css` are byte-identical.
+`dist/payment-page.js` and `dist/payment-page.css` change; `dist/wallets.js` is byte-identical.
 
 # 0.4.2
 

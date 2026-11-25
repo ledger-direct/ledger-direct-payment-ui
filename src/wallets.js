@@ -88,6 +88,12 @@ export function startWallets(root, options = {}) {
         });
         out.textContent = message;
         out.hidden = message === '';
+        // An error must not read like the hint above it: marked, the stylesheet sets it apart.
+        if (message !== '' && key.indexOf('error-') === 0) {
+            out.setAttribute('data-ld-wallet-error', '');
+        } else {
+            out.removeAttribute('data-ld-wallet-error');
+        }
     }
 
     function showStatus(key) {
