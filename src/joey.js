@@ -25,8 +25,16 @@
  * refusal, a wrong network or a missing wallet the same way for every wallet.
  */
 
-/** The engine results under which a submitted transaction may still be applied. */
-const SUBMITTED = ['tesSUCCESS', 'terQUEUED'];
+/**
+ * A preliminary engine result decides nothing, except a malformed transaction
+ * (`tem…`), which no ledger takes unless the protocol changes. Every other
+ * result — tes, tec, ter, tef, tel — can still end differently once a ledger
+ * is validated (xrpl.org, "Finality of Results"), so a submission with a hash
+ * goes to the page as submitted, and the page asks the server.
+ */
+function neverApplied(engineResult) {
+    return typeof engineResult === 'string' && engineResult.startsWith('tem');
+}
 
 /** The injected provider, or null. Looked up on every call: the extension may inject after the page started. */
 export function findJoey(scope = globalThis) {
@@ -188,8 +196,8 @@ export function createJoeyAdapter(lib, options = {}) {
                 if (!result || typeof result.hash !== 'string' || result.hash === '') {
                     throw new Error('Joey returned no transaction hash');
                 }
-                if (result.engine_result !== undefined && !SUBMITTED.includes(result.engine_result)) {
-                    throw new Error('Joey submitted the transaction, the ledger answered ' + result.engine_result);
+                if (neverApplied(result.engine_result)) {
+                    throw new Error('Joey submitted the transaction, the ledger refused it as malformed: ' + result.engine_result);
                 }
                 return { hash: result.hash, tx_blob: result.tx_blob, tx_json: result.tx_json };
             } catch (error) {

@@ -163,15 +163,18 @@ test('reports a declined signature as the user\'s choice', async () => {
   await assert.rejects(adapter.signAndSubmit(payment), (error) => error.code === 'SIGN_REJECTED' && error.category === 'USER_ACTION');
 });
 
-test('a submission the ledger refused, or one without a hash, is not a payment', async () => {
-  for (const answer of [{ hash: HASH, engine_result: 'tecPATH_DRY' }, { engine_result: 'tesSUCCESS' }, null]) {
+test('a submission with a hash goes to the page, whatever its preliminary result, unless it is malformed', async () => {
+  // Preliminary results are not final (xrpl.org, "Finality of Results"): only tem never makes it into a ledger.
+  for (const engine of ['tesSUCCESS', 'terQUEUED', 'tecPATH_DRY', 'tefPAST_SEQ', 'telINSUF_FEE_P', undefined]) {
+    const adapter = adapterFor(fakeJoey({ answer: { hash: HASH, engine_result: engine } }).joey);
+    await adapter.connect({ network: 'testnet' });
+    assert.equal((await adapter.signAndSubmit(payment)).hash, HASH, String(engine));
+  }
+  for (const answer of [{ hash: HASH, engine_result: 'temBAD_AMOUNT' }, { engine_result: 'tesSUCCESS' }, null]) {
     const adapter = adapterFor(fakeJoey({ answer }).joey);
     await adapter.connect({ network: 'testnet' });
     await rejects(adapter.signAndSubmit(payment), 'SIGN_FAILED');
   }
-  const queued = adapterFor(fakeJoey({ answer: { hash: HASH, engine_result: 'terQUEUED' } }).joey);
-  await queued.connect({ network: 'testnet' });
-  assert.equal((await queued.signAndSubmit(payment)).hash, HASH);
 });
 
 test('offers neither signing alone nor message signing', async () => {
