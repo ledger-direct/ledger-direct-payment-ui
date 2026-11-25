@@ -18,25 +18,50 @@ function refusal(code) {
   return Object.assign(new Error('declined'), { code });
 }
 
-/** The extension, on `chain`; `refuse` makes connect or sign fail with that error. */
+/**
+ * The extension, on `chain`; `refuse…` makes connect or sign fail with that error.
+ * As Joey documents it: getNetwork and signing need a site with access (4100
+ * otherwise), connect grants it; `on` answers an unsubscribe function (with
+ * `legacyOn`, nothing, and removeListener unsubscribes, as the build we tried has it).
+ */
 function fakeJoey(options = {}) {
-  const { chain = 'xrpl:1', refuseConnect, refuseSign } = options;
+  const { chain = 'xrpl:1', refuseConnect, refuseSign, legacyOn = false } = options;
   const calls = { connect: [], sign: [] };
+  const listeners = new Map();
   const joey = {
     isJoey: true,
     chain,
+    granted: false,
     async connect(params) {
       calls.connect.push(params);
       if (refuseConnect) throw refuseConnect;
+      joey.granted = true;
       return { accounts: [{ address: CUSTOMER }], chain: joey.chain };
     },
     async getNetwork() {
+      if (!joey.granted) throw refusal(4100);
       return { chain: joey.chain, networkId: Number(joey.chain.split(':')[1]), name: 'whatever' };
     },
     async signAndSubmitTransaction(params) {
+      if (!joey.granted) throw refusal(4100);
       calls.sign.push(params);
       if (refuseSign) throw refuseSign;
       return 'answer' in options ? options.answer : { tx_json: params.tx_json, tx_blob: '1200', hash: HASH, engine_result: 'tesSUCCESS', engine_result_message: 'ok' };
+    },
+    on(event, callback) {
+      if (!listeners.has(event)) listeners.set(event, new Set());
+      listeners.get(event).add(callback);
+      return legacyOn ? undefined : () => listeners.get(event).delete(callback);
+    },
+    removeListener(event, callback) {
+      listeners.get(event)?.delete(callback);
+    },
+    /** Joey tells the site something. */
+    emit(event, payload) {
+      for (const callback of [...(listeners.get(event) ?? [])]) callback(payload);
+    },
+    listening() {
+      return [...listeners.values()].reduce((n, set) => n + set.size, 0);
     },
   };
   return { joey, calls };
@@ -195,5 +220,97 @@ test('works inside XRPL Connect\'s WalletManager the way wallets.js uses it', as
   const submitted = await manager.signAndSubmit({ ...payment, Account: account.address });
   assert.equal(submitted.hash, HASH);
   assert.equal(calls.sign.length, 1);
+  await manager.disconnect();
+});
+
+/*
+ * When is a connection still the one to pay with? While Joey grants the site
+ * access, still offers the connected account and is on the connected chain.
+ * Every way Joey ends one is told to XRPL Connect, so the next click asks Joey
+ * again instead of reusing a connection Joey no longer honours.
+ */
+async function connectedWithEars(options) {
+  const { joey, calls } = fakeJoey(options);
+  const adapter = adapterFor(joey);
+  const told = [];
+  adapter.on('disconnect', () => told.push('disconnect'));
+  await adapter.connect({ network: 'testnet' });
+  return { joey, calls, adapter, told };
+}
+
+test('asked for no network, connects first and only then reads Joey\'s network', async () => {
+  // A site without access may not read it (4100): reading first never opened the approval.
+  const { joey, calls } = fakeJoey({ chain: 'xrpl:1' });
+  const account = await adapterFor(joey).connect();
+  assert.deepEqual(calls.connect, [undefined]);
+  assert.equal(account.network.id, 'testnet');
+});
+
+test('the owner revoked the site in Joey: the connection is over and XRPL Connect is told', async () => {
+  const { joey, adapter, told } = await connectedWithEars();
+  joey.granted = false;
+  joey.emit('disconnect', { reason: 'revoked' });
+  assert.deepEqual(told, ['disconnect']);
+  assert.equal(await adapter.getAccount(), null);
+  assert.equal(joey.listening(), 0, 'no listener left on the provider');
+});
+
+test('Joey no longer offers the connected account: over; still offers it: kept', async () => {
+  for (const [accounts, over] of [[[], true], [[{ address: SHOP }], true], [[SHOP], true], [[{ address: CUSTOMER }, { address: SHOP }], false], [[CUSTOMER], false]]) {
+    const { joey, adapter, told } = await connectedWithEars();
+    joey.emit('accountsChanged', accounts);
+    assert.equal(told.length, over ? 1 : 0, JSON.stringify(accounts));
+    assert.equal((await adapter.getAccount()) === null, over, JSON.stringify(accounts));
+  }
+});
+
+test('Joey switched to another network: over; the same one: kept', async () => {
+  for (const [network, over] of [[{ chain: 'xrpl:0' }, true], [null, true], [{ chain: 'xrpl:1' }, false]]) {
+    const { joey, adapter, told } = await connectedWithEars();
+    joey.emit('networkChanged', network);
+    assert.equal(told.length, over ? 1 : 0, JSON.stringify(network));
+    assert.equal((await adapter.getAccount()) === null, over, JSON.stringify(network));
+  }
+});
+
+test('access ended without an event: signing finds out, signs nothing, and XRPL Connect is told', async () => {
+  const { joey, calls, adapter, told } = await connectedWithEars();
+  joey.granted = false;
+  await rejects(adapter.signAndSubmit(payment), 'NOT_CONNECTED');
+  assert.equal(calls.sign.length, 0);
+  assert.deepEqual(told, ['disconnect']);
+  assert.equal(await adapter.getAccount(), null);
+});
+
+test('the page disconnecting stops listening to Joey and tells nobody', async () => {
+  for (const legacyOn of [false, true]) {
+    const { joey, adapter, told } = await connectedWithEars({ legacyOn });
+    assert.equal(joey.listening(), 3);
+    await adapter.disconnect();
+    assert.equal(joey.listening(), 0, legacyOn ? 'removeListener' : 'unsubscribe function');
+    joey.emit('disconnect', {});
+    assert.deepEqual(told, []);
+  }
+});
+
+test('connecting again does not pile up listeners on Joey', async () => {
+  const { joey, adapter } = await connectedWithEars();
+  await adapter.connect({ network: 'testnet' });
+  await adapter.connect({ network: 'testnet' });
+  assert.equal(joey.listening(), 3);
+});
+
+test('inside WalletManager: after Joey revoked the site, the next connect asks Joey again', async () => {
+  const { joey, calls } = fakeJoey();
+  const manager = new lib.WalletManager({ adapters: [adapterFor(joey)], network: 'testnet', autoConnect: false });
+  await manager.connect('joey', { network: 'testnet' });
+  joey.granted = false;
+  joey.emit('disconnect', { reason: 'revoked' });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(manager.connected, false);
+  await manager.connect('joey', { network: 'testnet' });
+  assert.equal(calls.connect.length, 2);
+  const submitted = await manager.signAndSubmit({ ...payment, Account: CUSTOMER });
+  assert.equal(submitted.hash, HASH);
   await manager.disconnect();
 });

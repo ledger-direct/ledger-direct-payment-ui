@@ -5,8 +5,10 @@
   (`src/joey.js`) that talks to the provider the extension injects (`window.xrpl.joey`) — no Joey SDK, no new
   dependency. It connects on the page's network and checks it again before signing: a wallet on another
   network than the order pays nothing. Joey knows no Xahau, and the wallet list is XRPL-only anyway.
-  The provider calls it makes were tried by hand against the extension on the XRPL testnet, XRP and
-  RLUSD, both settled.
+  A connection holds while Joey grants the site access, offers the connected account and stays on the
+  connected network; when Joey ends it (access revoked, account gone, network switched) the page forgets it and
+  the next click asks Joey again. The provider calls it makes were tried by hand against the extension on the
+  XRPL testnet, XRP and RLUSD, both settled.
 - **A wallet error stands out.** A wallet message that reports a problem — another network, a wallet that does
   not respond, a failed payment — read like a continuation of the hint above it, in the same small grey type;
   in a manual test it went unseen. `wallets.js` now marks it (`data-ld-wallet-error` on the message element)

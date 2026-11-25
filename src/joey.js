@@ -50,10 +50,14 @@ export function createJoeyAdapter(lib, options = {}) {
     const errors = lib.createWalletError;
     const providerOf = options.provider || (() => findJoey());
     const NAME = 'Joey';
+    const STANDARD = ['mainnet', 'testnet', 'devnet'];
 
     let account = null;
     let chain = null;
     let generation = 0;
+    let unwatch = null;
+    /** Who XRPL Connect's WalletManager asked to hear about this adapter's events. */
+    const listeners = new Map();
 
     function provider() {
         const found = providerOf();
@@ -71,19 +75,8 @@ export function createJoeyAdapter(lib, options = {}) {
         return typeof lib.isWalletError === 'function' ? lib.isWalletError(error) : !!(error && error.category);
     }
 
-    /**
-     * The standard network asked for, with its CAIP-2 chain; Joey knows no other.
-     * Asked for none: the one the wallet is on (the payment page always asks).
-     */
-    async function requested(network, joey) {
-        if (network === undefined) {
-            const now = await liveChain(joey);
-            const standard = ['mainnet', 'testnet', 'devnet'].map((id) => lib.resolveNetwork(id)).find((info) => info.walletConnectId === now);
-            if (!standard) {
-                throw errors.networkNotSupported(now || 'unknown', NAME);
-            }
-            return standard;
-        }
+    /** The standard network asked for, with its CAIP-2 chain; Joey knows no other. */
+    function requested(network) {
         if (typeof network === 'string' && !lib.isStandardNetworkId(network)) {
             throw errors.networkNotSupported(network, NAME);
         }
@@ -94,16 +87,112 @@ export function createJoeyAdapter(lib, options = {}) {
         return info;
     }
 
-    /** A chain as XRPL Connect names its networks (mainnet, testnet, devnet), for messages; another chain as it is. */
-    function named(walletChain) {
-        const standard = ['mainnet', 'testnet', 'devnet'].find((id) => lib.resolveNetwork(id).walletConnectId === walletChain);
-        return standard || walletChain || 'unknown';
+    /** The standard network whose CAIP-2 chain this is, or undefined. */
+    function standardFor(walletChain) {
+        return STANDARD.map((id) => lib.resolveNetwork(id)).find((info) => info.walletConnectId === walletChain);
     }
 
-    /** The chain the wallet is on now. */
+    /** A chain as XRPL Connect names its networks (mainnet, testnet, devnet), for messages; another chain as it is. */
+    function named(walletChain) {
+        const standard = standardFor(walletChain);
+        return standard ? standard.id : walletChain || 'unknown';
+    }
+
+    /** The chain the wallet is on now. Only a site with Joey's permission may ask (4100 otherwise). */
     async function liveChain(joey) {
         const live = await joey.getNetwork();
         return live && typeof live.chain === 'string' ? live.chain : '';
+    }
+
+    function emit(event, data) {
+        (listeners.get(event) || new Set()).forEach((callback) => {
+            try {
+                callback(data);
+            } catch {
+                // a listener's failure is not the wallet's
+            }
+        });
+    }
+
+    /** Joey's `on` answers an unsubscribe function; older builds only have removeListener (or off). */
+    function subscribe(joey, event, callback) {
+        const off = joey.on(event, callback);
+        if (typeof off === 'function') {
+            return off;
+        }
+        return () => {
+            const remove = typeof joey.off === 'function' ? joey.off : joey.removeListener;
+            if (typeof remove === 'function') {
+                remove.call(joey, event, callback);
+            }
+        };
+    }
+
+    function stopWatching() {
+        if (unwatch) {
+            const stop = unwatch;
+            unwatch = null;
+            stop();
+        }
+    }
+
+    /** Forgets the connection here, without a word to anyone. */
+    function forget() {
+        generation += 1;
+        account = null;
+        chain = null;
+        stopWatching();
+    }
+
+    /**
+     * The connection is over on Joey's side: XRPL Connect is told, so it does not
+     * hand the next click a connection Joey no longer honours, and that click asks
+     * Joey again.
+     */
+    function lost() {
+        if (!account) {
+            return;
+        }
+        forget();
+        emit('disconnect');
+    }
+
+    function addressOf(entry) {
+        return typeof entry === 'string' ? entry : entry && entry.address;
+    }
+
+    /**
+     * A connection is the one to pay with while Joey grants the site access, still
+     * offers the connected account, and is on the connected chain. Joey tells each
+     * change: `disconnect` (access revoked, accounts deleted, wallet reset),
+     * `accountsChanged` (empty when revoked), `networkChanged`. Locking Joey ends
+     * nothing: requests wait behind its unlock screen.
+     */
+    function watch(joey) {
+        stopWatching();
+        if (typeof joey.on !== 'function') {
+            return;
+        }
+        const offs = [
+            subscribe(joey, 'disconnect', () => lost()),
+            subscribe(joey, 'accountsChanged', (accounts) => {
+                if (account && !(Array.isArray(accounts) && accounts.some((entry) => addressOf(entry) === account.address))) {
+                    lost();
+                }
+            }),
+            subscribe(joey, 'networkChanged', (network) => {
+                if (account && !(network && network.chain === chain)) {
+                    lost();
+                }
+            }),
+        ];
+        unwatch = () => offs.forEach((off) => {
+            try {
+                off();
+            } catch {
+                // the provider may be gone already
+            }
+        });
     }
 
     return {
@@ -116,25 +205,39 @@ export function createJoeyAdapter(lib, options = {}) {
             return providerOf() !== null;
         },
 
+        /**
+         * Asks Joey for access on the page's network. Asked for none, on the
+         * network Joey is on (the payment page always asks). Joey's network is read
+         * only after connect(): a site without access may not ask for it.
+         */
         async connect(connectOptions = {}) {
             const mine = ++generation;
+            stopWatching();
+            account = null;
+            chain = null;
             try {
                 const joey = provider();
-                const network = await requested(connectOptions.network, joey);
-                const answer = await joey.connect({ chain: network.walletConnectId });
+                const asked = connectOptions.network === undefined ? null : requested(connectOptions.network);
+                const answer = asked ? await joey.connect({ chain: asked.walletConnectId }) : await joey.connect();
                 const now = await liveChain(joey);
                 if (mine !== generation) {
                     throw errors.notConnected();
+                }
+                const network = asked || standardFor(now);
+                if (!network) {
+                    throw errors.networkNotSupported(now || 'unknown', NAME);
                 }
                 if ((answer && answer.chain) !== network.walletConnectId || now !== network.walletConnectId) {
                     throw errors.networkMismatch(network.id, named(now || (answer && answer.chain)));
                 }
                 const first = answer && Array.isArray(answer.accounts) ? answer.accounts[0] : null;
-                if (!first || typeof first.address !== 'string' || !/^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(first.address)) {
+                const address = addressOf(first);
+                if (typeof address !== 'string' || !/^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(address)) {
                     throw new Error('Joey returned no account');
                 }
                 chain = network.walletConnectId;
-                account = { address: first.address, publicKey: first.publicKey, network };
+                account = { address, publicKey: first && first.publicKey, network };
+                watch(joey);
                 return account;
             } catch (error) {
                 if (isWalletError(error)) throw error;
@@ -149,9 +252,7 @@ export function createJoeyAdapter(lib, options = {}) {
 
         /** Forgets the connection here. Joey keeps the site's permission; revoking it is the owner's choice, in Joey. */
         async disconnect() {
-            generation += 1;
-            account = null;
-            chain = null;
+            forget();
         },
 
         async getAccount() {
@@ -179,6 +280,7 @@ export function createJoeyAdapter(lib, options = {}) {
             }
             const mine = generation;
             const from = account.address;
+            const network = account.network;
             const on = chain;
             try {
                 if (transaction.Account !== undefined && transaction.Account !== from) {
@@ -187,11 +289,11 @@ export function createJoeyAdapter(lib, options = {}) {
                 const joey = provider();
                 // The owner may have switched networks in Joey since connecting.
                 const now = await liveChain(joey);
-                if (now !== on) {
-                    throw errors.networkMismatch(account.network.id, named(now));
-                }
                 if (mine !== generation) {
                     throw errors.notConnected();
+                }
+                if (now !== on) {
+                    throw errors.networkMismatch(network.id, named(now));
                 }
                 const result = await joey.signAndSubmitTransaction({
                     tx_json: { ...transaction, Account: from },
@@ -209,8 +311,29 @@ export function createJoeyAdapter(lib, options = {}) {
             } catch (error) {
                 if (isWalletError(error)) throw error;
                 if (code(error) === 4001) throw errors.signRejected(error);
-                if (code(error) === 4901 || code(error) === 4902) throw errors.networkMismatch(account ? account.network.id : 'unknown', 'another network');
+                if (code(error) === 4901 || code(error) === 4902) throw errors.networkMismatch(network.id, 'another network');
+                if (code(error) === 4100) {
+                    // Joey no longer grants this site access and no event said so: the
+                    // connection is over, and the next click asks Joey again.
+                    if (mine === generation) lost();
+                    throw errors.notConnected();
+                }
                 throw errors.signFailed(error);
+            }
+        },
+
+        /** For XRPL Connect's WalletManager: `disconnect` when Joey ended the connection. */
+        on(event, callback) {
+            if (!listeners.has(event)) {
+                listeners.set(event, new Set());
+            }
+            listeners.get(event).add(callback);
+        },
+
+        off(event, callback) {
+            const set = listeners.get(event);
+            if (set) {
+                set.delete(callback);
             }
         },
     };
