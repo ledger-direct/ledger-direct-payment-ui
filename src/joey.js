@@ -94,6 +94,12 @@ export function createJoeyAdapter(lib, options = {}) {
         return info;
     }
 
+    /** A chain as XRPL Connect names its networks (mainnet, testnet, devnet), for messages; another chain as it is. */
+    function named(walletChain) {
+        const standard = ['mainnet', 'testnet', 'devnet'].find((id) => lib.resolveNetwork(id).walletConnectId === walletChain);
+        return standard || walletChain || 'unknown';
+    }
+
     /** The chain the wallet is on now. */
     async function liveChain(joey) {
         const live = await joey.getNetwork();
@@ -121,7 +127,7 @@ export function createJoeyAdapter(lib, options = {}) {
                     throw errors.notConnected();
                 }
                 if ((answer && answer.chain) !== network.walletConnectId || now !== network.walletConnectId) {
-                    throw errors.networkMismatch(network.id, now || (answer && answer.chain) || 'unknown');
+                    throw errors.networkMismatch(network.id, named(now || (answer && answer.chain)));
                 }
                 const first = answer && Array.isArray(answer.accounts) ? answer.accounts[0] : null;
                 if (!first || typeof first.address !== 'string' || !/^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(first.address)) {
@@ -182,7 +188,7 @@ export function createJoeyAdapter(lib, options = {}) {
                 // The owner may have switched networks in Joey since connecting.
                 const now = await liveChain(joey);
                 if (now !== on) {
-                    throw errors.networkMismatch(account.network.id, now || 'unknown');
+                    throw errors.networkMismatch(account.network.id, named(now));
                 }
                 if (mine !== generation) {
                     throw errors.notConnected();

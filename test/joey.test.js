@@ -144,7 +144,8 @@ test('signs nothing when the owner switched networks after connecting', async ()
   const adapter = adapterFor(joey);
   await adapter.connect({ network: 'testnet' });
   joey.chain = 'xrpl:0';
-  await rejects(adapter.signAndSubmit(payment), 'NETWORK_MISMATCH');
+  // Named as XRPL Connect names networks, not as a CAIP-2 chain.
+  await assert.rejects(adapter.signAndSubmit(payment), (error) => error.code === 'NETWORK_MISMATCH' && /Expected "testnet" but wallet is connected to "mainnet"/.test(error.message));
   assert.equal(calls.sign.length, 0);
 });
 
