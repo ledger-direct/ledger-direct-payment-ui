@@ -1,3 +1,16 @@
+# 0.5.0
+
+- **Joey Wallet in the wallet list.** Joey's browser extension is offered next to the wallets XRPL Connect
+  brings, shown when it is installed. XRPL Connect 1.0.0 has no adapter for it, so the package has one
+  (`src/joey.js`) that talks to the provider the extension injects (`window.xrpl.joey`) — no Joey SDK, no new
+  dependency. It connects on the page's network and checks it again before signing: a wallet on another
+  network than the order pays nothing. Joey knows no Xahau, and the wallet list is XRPL-only anyway.
+  The provider calls it makes were tried by hand against the extension on the XRPL testnet, XRP and
+  RLUSD, both settled.
+
+`dist/payment-page.js` changes (the adapter is part of the page script); `dist/wallets.js` and
+`dist/payment-page.css` are byte-identical.
+
 # 0.4.2
 
 - **The page leaves once.** The button on the success view and the countdown both went to the
