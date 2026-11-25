@@ -63,7 +63,7 @@ Inside the root:
 | `[data-ld-wallet-section]` | browser-wallet UI (XRPL only); hidden in `expired`, on any chain but `XRPL`, and, unless `[data-ld-wallet-mobile]`, on narrow screens |
 | `[data-ld-wallet-desktop]` with `[data-ld-wallet-toggle]`, `[data-ld-wallets]`, `[data-ld-wallet-list]` | the "pay with a browser wallet" button, the list it opens, and the element the detected wallets are rendered into; `[data-ld-wallet-status="loading|none|hint"]` are the three sentences around the list |
 | `[data-ld-wallet-app]` with `data-ld-wallet-id="xaman|walletconnect"` | the phone's "open in wallet app" button, rendered only when the merchant configured that identifier |
-| `[data-ld-wallet-message]` and `[data-ld-wallet-text="<key>"]` | where the module's messages appear, and the hidden server-rendered sentences it picks from: `found`, `confirm`, `submitted`, `error-unavailable`, `error-network`, `error-mismatch` (with `%network%`), `error-other`, `network-mainnet`, `network-testnet` |
+| `[data-ld-wallet-message]` and `[data-ld-wallet-text="<key>"]` | where the module's messages appear, and the hidden server-rendered sentences it picks from: `found`, `confirm`, `submitted`, `error-unavailable`, `error-network`, `error-mismatch` (with `%network%`), `error-other`, `network-mainnet`, `network-testnet`. The module marks an error with `data-ld-wallet-error` on the message element; the stylesheet sets it apart from the hint. |
 | `[data-ld-success]` | the success view: `[data-ld-settled-amount]`, `[data-ld-hash-row]` with `[data-ld-hash]`, `[data-ld-redirect-link]`, `[data-ld-redirect-count]` |
 
 The end-to-end harness (`ledger-direct-e2e`) reads the page through this contract only: `data-ld-state`,

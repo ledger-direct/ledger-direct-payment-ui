@@ -21,6 +21,8 @@
  * server-rendered [data-ld-wallet-text] element this module shows.
  */
 
+import { createJoeyAdapter } from './joey.js';
+
 const AVAILABILITY_TIMEOUT_MS = 4000;
 
 /**
@@ -86,6 +88,12 @@ export function startWallets(root, options = {}) {
         });
         out.textContent = message;
         out.hidden = message === '';
+        // An error must not read like the hint above it: marked, the stylesheet sets it apart.
+        if (message !== '' && key.indexOf('error-') === 0) {
+            out.setAttribute('data-ld-wallet-error', '');
+        } else {
+            out.removeAttribute('data-ld-wallet-error');
+        }
     }
 
     function showStatus(key) {
@@ -112,6 +120,8 @@ export function startWallets(root, options = {}) {
             new Adapters.Ledger(),
             new Adapters.Otsu(),
             new Adapters.Xyra(),
+            // Not in XRPL Connect yet; talks to the extension's injected provider (see joey.js).
+            createJoeyAdapter(lib),
         ];
         if (xamanApiKey) {
             adapters.push(new Adapters.Xaman({ apiKey: xamanApiKey }));

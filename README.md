@@ -4,7 +4,8 @@ The LedgerDirect payment page — the page a customer sees after checkout to pay
 Ledger — as one framework-free implementation shared by every LedgerDirect plugin (Shopware, PrestaShop,
 WooCommerce, Magento). Five payment states, a countdown, polling of the platform's status endpoint, copy
 buttons, a QR code with address, destination tag and amount, and browser wallets over
-[XRPL Connect](https://github.com/XRPL-Commons/xrpl-connect).
+[XRPL Connect](https://github.com/XRPL-Commons/xrpl-connect), plus an adapter of its own for the Joey Wallet
+extension (`src/joey.js`), which XRPL Connect does not have yet.
 
 The package holds the two halves that are the same everywhere: **behaviour** (`src/*.js`) and **design**
 (`src/payment-page.css`). What differs per platform stays in the plugin: the template that renders the
