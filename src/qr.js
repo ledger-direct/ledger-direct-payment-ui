@@ -60,3 +60,59 @@ export function startQr(root) {
         }
     });
 }
+
+/**
+ * A QR code for one field — the receiving address or the destination tag —
+ * in a dialog next to its copy button, for a wallet whose scanner fills one
+ * field at a time. The values are the server-rendered ones the copy buttons
+ * read (`data-value` of `[data-ld-account]`, `[data-ld-tag]`); the dialog and
+ * every word in it are the template's (`[data-ld-qr-dialog]`).
+ */
+export function startFieldQr(root) {
+    const dialog = root.querySelector('[data-ld-qr-dialog]');
+    if (!dialog) {
+        return;
+    }
+    const code = dialog.querySelector('[data-ld-qr-dialog-code]');
+    const shown = dialog.querySelector('[data-ld-qr-dialog-value]');
+
+    function close() {
+        if (typeof dialog.close === 'function') {
+            dialog.close();
+        } else {
+            dialog.removeAttribute('open');
+        }
+    }
+
+    root.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-ld-qr-show]');
+        if (!button) {
+            return;
+        }
+        const kind = button.getAttribute('data-ld-qr-show');
+        const source = root.querySelector('[data-ld-' + kind + ']');
+        const value = source ? (source.getAttribute('data-value') || source.textContent).trim() : '';
+        if (!value || !code) {
+            return;
+        }
+        render(code, value, button.getAttribute('aria-label') || '');
+        if (shown) {
+            shown.textContent = value;
+        }
+        dialog.querySelectorAll('[data-ld-qr-dialog-title]').forEach((el) => {
+            el.hidden = el.getAttribute('data-ld-qr-dialog-title') !== kind;
+        });
+        if (typeof dialog.showModal === 'function') {
+            dialog.showModal();
+        } else {
+            dialog.setAttribute('open', '');
+        }
+    });
+
+    dialog.addEventListener('click', (event) => {
+        // The close button, or a click on the backdrop (the dialog itself, outside its content).
+        if (event.target === dialog || event.target.closest('[data-ld-qr-dialog-close]')) {
+            close();
+        }
+    });
+}

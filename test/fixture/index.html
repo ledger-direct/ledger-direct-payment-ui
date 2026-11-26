@@ -133,6 +133,7 @@
                 <div class="ld-field-label"><span class="ld-step-no">1</span> Receiving address</div>
                 <div class="ld-field">
                   <span class="ld-field-value" data-ld-account data-value="rMW6jyfsGyB5kPoYWVV4z1h9DA5KmEGPYq">rMW6jyfsGyB5kPoYWVV4z1h9DA5KmEGPYq</span>
+                  <button type="button" class="ld-copy ld-copy--qr" data-ld-qr-show="account" aria-label="Show the address as a QR code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg></button>
                   <button type="button" class="ld-copy" data-copy="account" aria-label="Copy address"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span data-ld-copy-label="idle">Copy</span><span data-ld-copy-label="done" hidden>Copied</span></button>
                 </div>
               </li>
@@ -140,11 +141,20 @@
                 <div class="ld-field-label"><span class="ld-step-no">2</span> Destination tag <span class="ld-badge ld-badge--required">Required</span></div>
                 <div class="ld-field ld-field--key">
                   <span class="ld-field-value" data-ld-tag data-value="795186163">795186163</span>
+                  <button type="button" class="ld-copy ld-copy--qr" data-ld-qr-show="tag" aria-label="Show the destination tag as a QR code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg></button>
                   <button type="button" class="ld-copy" data-copy="tag" aria-label="Copy destination tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span data-ld-copy-label="idle">Copy</span><span data-ld-copy-label="done" hidden>Copied</span></button>
                 </div>
                 <p class="ld-hint">Without this tag we cannot match the payment to your order.</p>
               </li>
             </ol>
+
+            <dialog class="ld-qr-dialog" data-ld-qr-dialog>
+              <p class="ld-qr-dialog-title" data-ld-qr-dialog-title="account">Receiving address</p>
+              <p class="ld-qr-dialog-title" data-ld-qr-dialog-title="tag" hidden>Destination tag</p>
+              <div class="ld-qr-box"><div data-ld-qr-dialog-code></div></div>
+              <code class="ld-qr-dialog-value" data-ld-qr-dialog-value></code>
+              <button type="button" class="ld-btn ld-btn--secondary ld-btn--block" data-ld-qr-dialog-close>Close</button>
+            </dialog>
 
             <details class="ld-exchange">
               <summary>Paying from an exchange?</summary>
@@ -154,7 +164,7 @@
 
           <aside class="ld-col ld-col--side" aria-label="Pay with a wallet">
             <details class="ld-qr" data-ld-qr-details open>
-              <summary><span class="ld-qr-sum-open">Scan with a wallet app</span><span class="ld-qr-sum-closed">Show QR code ▾</span></summary>
+              <summary><span class="ld-qr-sum-open">Scan with Xaman</span><span class="ld-qr-sum-closed">Show QR code ▾</span></summary>
               <div class="ld-qr-box" data-ld-qr-box>
                 <div data-ld-qr data-ld-qr-label="QR code with address, destination tag and amount"></div>
                 <div class="ld-qr-void" data-ld-qr-void hidden>Expired – please request a new amount</div>

@@ -6,5 +6,5 @@
  * bundler use dist/ (see README.md).
  */
 export { startPaymentPage } from './payment-page.js';
-export { startQr } from './qr.js';
+export { startQr, startFieldQr } from './qr.js';
 export { startWallets } from './wallets.js';

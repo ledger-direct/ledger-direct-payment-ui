@@ -9,6 +9,12 @@
 - **The wallet app sees the shop.** WalletConnect tells the wallet who is asking: `data-ld-shop-name` and
   `data-ld-shop-icon` on the root when the platform renders them, else the host name and `/favicon.ico`.
   Before, the wallet showed the host name and a default icon.
+- **Address and tag as QR codes of their own.** `[data-ld-qr-show="account|tag"]` next to a copy button opens a
+  dialog (`[data-ld-qr-dialog]`) with that one field as a QR code, for wallets whose scanner fills one field at a
+  time — Joey Wallet reads a plain address but no payment request. Both optional.
+- **Layout:** the caption under the QR code is centred under it (a general paragraph rule had taken its auto
+  margins), the "or" between the alternatives is larger, and the wallet's sentence under the buttons is centred
+  with room above.
 
 # 0.5.0
 

@@ -59,6 +59,8 @@ Inside the root:
 | `[data-ld-timer]`, `[data-ld-countdown]`, `[data-ld-timer-bar]` | the countdown |
 | `[data-ld-account]`, `[data-ld-tag]`, `[data-ld-issuer]` | copy sources (`data-value` or text). `[data-ld-tag]` is **the order identifier as shown**: the destination tag on XRPL, the memo id on Stellar — one slot, whatever the chain calls it; the label next to it is the platform's |
 | `[data-copy="amount|account|tag|issuer"]` | copy buttons, with `[data-ld-copy-label="idle|done"]` children |
+| `[data-ld-qr-show="account|tag"]` | optional, next to a copy button: shows that one field as a QR code, for a wallet whose scanner fills one field at a time; its `aria-label` names the code |
+| `[data-ld-qr-dialog]` with `[data-ld-qr-dialog-title="account|tag"]`, `[data-ld-qr-dialog-code]`, `[data-ld-qr-dialog-value]`, `[data-ld-qr-dialog-close]` | the `<dialog>` those buttons open: the title per field, where the code is drawn, the value under it, the close button. Without it the buttons do nothing |
 | `[data-ld-check-form]`, `[data-ld-check]`, `[data-ld-check-label="idle|busy"]`, `[data-ld-toast]` | the check button, its labels and the "nothing found yet" hint |
 | `[data-ld-qr-details]`, `[data-ld-qr]`, `[data-ld-qr-box]`, `[data-ld-qr-void]` | the QR code, collapsible on narrow screens, blurred in `expired`; `[data-ld-qr]` may carry `data-ld-qr-label`, the accessible name of the rendered code |
 | `[data-ld-wallet-section]` | browser-wallet UI (XRPL only); hidden in `expired`, on any chain but `XRPL`, and, unless `[data-ld-wallet-mobile]`, on narrow screens |

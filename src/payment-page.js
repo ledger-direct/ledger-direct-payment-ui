@@ -21,7 +21,7 @@
  * the server states them.
  */
 
-import { startQr } from './qr.js';
+import { startQr, startFieldQr } from './qr.js';
 import { startWallets } from './wallets.js';
 
 const POLL_INTERVAL_MS = 8000;
@@ -551,6 +551,7 @@ export function startPaymentPage(root, options = {}) {
     showState(state);
     startCountdown();
     startQr(root);
+    startFieldQr(root);
     startWallets(root, options);
     schedulePoll();
 
