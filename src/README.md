@@ -41,6 +41,7 @@ Root element `.ld-page` with:
 | `data-ld-amount-drops` | XRP only, optional: the requested amount in drops, as a string; read by `wallets.js` alone |
 | `data-ld-currency`, `data-ld-issuer` | XRPL tokens only: the quoted currency hex code and issuer; read by `wallets.js` alone |
 | `data-ld-xaman-key`, `data-ld-wc-project` | optional wallet-app identifiers |
+| `data-ld-shop-name`, `data-ld-shop-icon` | optional: the name and icon URL (absolute or relative to the page) a wallet app shows when WalletConnect connects; absent → the host name and `/favicon.ico` |
 | `data-ld-amount-requested` | the requested amount as a plain decimal, whatever `[data-ld-amount]` shows (in `partial` that is the shortfall); read by the end-to-end harness |
 | `data-ld-wallets-src` | classic build only: absolute URL of `dist/wallets.js`; absent → no browser wallets |
 
@@ -52,17 +53,20 @@ Inside the root:
 | `[data-ld-block="<state>"]` | one block per state; the script hides all but the current |
 | `[data-ld-status-for="<state>"]` | the status line sentence per state |
 | `[data-ld-amount]` | the amount to send; in `partial` the script replaces it with the shortfall |
-| `[data-ld-amount-label] [data-ld-label="due|remaining"]` | the two labels above the amount |
-| `[data-ld-fiat] [data-ld-fiat-for="full|partial"]` | the fiat line for the two cases |
+| `[data-ld-amount-label] [data-ld-label="due\|remaining"]` | the two labels above the amount |
+| `[data-ld-fiat] [data-ld-fiat-for="full\|partial"]` | the fiat line for the two cases |
 | `[data-ld-paid]`, `[data-ld-shortfall]`, `[data-ld-progress]` | inside a state block: numbers and the progress bar the poll fills |
 | `[data-ld-timer]`, `[data-ld-countdown]`, `[data-ld-timer-bar]` | the countdown |
 | `[data-ld-account]`, `[data-ld-tag]`, `[data-ld-issuer]` | copy sources (`data-value` or text). `[data-ld-tag]` is **the order identifier as shown**: the destination tag on XRPL, the memo id on Stellar — one slot, whatever the chain calls it; the label next to it is the platform's |
-| `[data-copy="amount|account|tag|issuer"]` | copy buttons, with `[data-ld-copy-label="idle|done"]` children |
-| `[data-ld-check-form]`, `[data-ld-check]`, `[data-ld-check-label="idle|busy"]`, `[data-ld-toast]` | the check button, its labels and the "nothing found yet" hint |
+| `[data-copy="amount\|account\|tag\|issuer"]` | copy buttons, with `[data-ld-copy-label="idle\|done"]` children |
+| `[data-ld-qr-show="account\|tag"]` | optional, next to a copy button: shows that one field as a QR code, for a wallet whose scanner fills one field at a time; its `aria-label` names the code |
+| `[data-ld-qr-dialog]` with `[data-ld-qr-dialog-title="account\|tag"]`, `[data-ld-qr-dialog-code]`, `[data-ld-qr-dialog-value]`, `[data-ld-qr-dialog-close]` | the `<dialog>` those buttons open: the title per field, where the code is drawn, the value under it, the close button. Without it the buttons do nothing |
+| `[data-ld-check-form]`, `[data-ld-check]`, `[data-ld-check-label="idle\|busy"]`, `[data-ld-toast]` | the check button, its labels and the "nothing found yet" hint |
 | `[data-ld-qr-details]`, `[data-ld-qr]`, `[data-ld-qr-box]`, `[data-ld-qr-void]` | the QR code, collapsible on narrow screens, blurred in `expired`; `[data-ld-qr]` may carry `data-ld-qr-label`, the accessible name of the rendered code |
 | `[data-ld-wallet-section]` | browser-wallet UI (XRPL only); hidden in `expired`, on any chain but `XRPL`, and, unless `[data-ld-wallet-mobile]`, on narrow screens |
-| `[data-ld-wallet-desktop]` with `[data-ld-wallet-toggle]`, `[data-ld-wallets]`, `[data-ld-wallet-list]` | the "pay with a browser wallet" button, the list it opens, and the element the detected wallets are rendered into; `[data-ld-wallet-status="loading|none|hint"]` are the three sentences around the list |
-| `[data-ld-wallet-app]` with `data-ld-wallet-id="xaman|walletconnect"` | the phone's "open in wallet app" button, rendered only when the merchant configured that identifier |
+| `[data-ld-wallet-desktop]` with `[data-ld-wallet-toggle]`, `[data-ld-wallets]`, `[data-ld-wallet-list]` | the "pay with a browser wallet" button, the list it opens, and the element the detected wallets are rendered into; `[data-ld-wallet-status="loading\|none\|hint"]` are the three sentences around the list |
+| `[data-ld-wallet-connect]` | the WalletConnect button, above `[data-ld-wallet-desktop]` and shown on every width: WalletConnect connects a wallet app, usually on another device, so with this button on the page it is not in the browser-wallet list (without it, as in templates from before, it stays there). Rendered only with `data-ld-wc-project`; a template that renders it also sets `[data-ld-wallet-mobile]` |
+| `[data-ld-wallet-app]` with `data-ld-wallet-id="xaman\|walletconnect"` | the phone's "open in wallet app" button, rendered only when the merchant configured that identifier. With `[data-ld-wallet-connect]` on the page it is Xaman's alone |
 | `[data-ld-wallet-message]` and `[data-ld-wallet-text="<key>"]` | where the module's messages appear, and the hidden server-rendered sentences it picks from: `found`, `confirm`, `submitted`, `error-unavailable`, `error-network`, `error-mismatch` (with `%network%`), `error-other`, `network-mainnet`, `network-testnet`. The module marks an error with `data-ld-wallet-error` on the message element; the stylesheet sets it apart from the hint. |
 | `[data-ld-success]` | the success view: `[data-ld-settled-amount]`, `[data-ld-hash-row]` with `[data-ld-hash]`, `[data-ld-redirect-link]`, `[data-ld-redirect-count]` |
 

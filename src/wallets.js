@@ -8,7 +8,8 @@
  * xrpl peer are a megabyte the page must not carry for everyone who pays by
  * QR code. How it is loaded is the platform's choice (see startWallets). Adapters that need no merchant identifier are always offered but
  * shown only when detected; Xaman and WalletConnect only when the merchant
- * configured their public identifier.
+ * configured their public identifier. WalletConnect is not in the list: it
+ * connects a wallet app on another device and has its own button above it.
  *
  * The transaction is built from server-rendered values alone: the receiving
  * account, the destination tag, the amount in drops for XRP (converted by the
@@ -32,6 +33,16 @@ const AVAILABILITY_TIMEOUT_MS = 4000;
  *     bare import below (a code-split chunk); the classic build passes a
  *     native `import()` of the URL in `data-ld-wallets-src`.
  */
+/**
+ * The wallets offered in the browser-wallet list. WalletConnect is not a browser
+ * wallet and has its own button where the template renders one
+ * ([data-ld-wallet-connect]); a template from before that button keeps it in the
+ * list, its only way in on a desktop.
+ */
+export function inTheList(available, hasConnectButton) {
+    return hasConnectButton ? available.filter((adapter) => adapter.id !== 'walletconnect') : available;
+}
+
 export function startWallets(root, options = {}) {
     const section = root.querySelector('[data-ld-wallet-section]');
     if (!section) {
@@ -51,6 +62,7 @@ export function startWallets(root, options = {}) {
     const list = section.querySelector('[data-ld-wallets]');
     const listHost = section.querySelector('[data-ld-wallet-list]');
     const appButton = section.querySelector('[data-ld-wallet-app]');
+    const connectButton = section.querySelector('[data-ld-wallet-connect]');
 
     let library = null;
     let manager = null;
@@ -111,6 +123,32 @@ export function startWallets(root, options = {}) {
         return library;
     }
 
+    /**
+     * Who the wallet app says is asking: the shop's name and icon as the server
+     * rendered them (data-ld-shop-name, data-ld-shop-icon; a relative icon URL is the
+     * page's, as an <img> on it would read it), else the host name and
+     * the site's favicon. The URL is always the page's own origin — WalletConnect
+     * compares it with where the request came from.
+     */
+    function shopMetadata() {
+        const origin = window.location.origin;
+        const name = (root.getAttribute('data-ld-shop-name') || '').trim() || window.location.hostname;
+        let icon = origin + '/favicon.ico';
+        const rendered = (root.getAttribute('data-ld-shop-icon') || '').trim();
+        if (rendered) {
+            try {
+                icon = new URL(rendered, window.location.href).toString();
+            } catch {
+                // a malformed icon URL is the favicon's loss, not the payment's
+            }
+        }
+        return { name, description: name, url: origin, icons: [icon] };
+    }
+
+    function prefersDark() {
+        return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    }
+
     function buildAdapters(lib) {
         const { Adapters } = lib;
         const adapters = [
@@ -127,7 +165,16 @@ export function startWallets(root, options = {}) {
             adapters.push(new Adapters.Xaman({ apiKey: xamanApiKey }));
         }
         if (walletConnectProjectId) {
-            adapters.push(new Adapters.WalletConnect({ projectId: walletConnectProjectId }));
+            // Without its own dialog the adapter only hands the connection URI to an
+            // onQRCode callback and waits; nothing would show the code. WalletConnect's
+            // dialog shows it on a desktop and offers the wallet apps on a phone.
+            adapters.push(new Adapters.WalletConnect({
+                projectId: walletConnectProjectId,
+                metadata: shopMetadata(),
+                useModal: true,
+                modalMode: 'always',
+                themeMode: prefersDark() ? 'dark' : 'light',
+            }));
         }
         return adapters;
     }
@@ -325,7 +372,7 @@ export function startWallets(root, options = {}) {
         showStatus('loading');
         try {
             const m = await ensureManager();
-            const available = await withTimeout(m.getAvailableWallets(), AVAILABILITY_TIMEOUT_MS, []);
+            const available = inTheList(await withTimeout(m.getAvailableWallets(), AVAILABILITY_TIMEOUT_MS, []), !!connectButton);
             available.forEach((adapter) => listHost.appendChild(renderWallet(adapter)));
             showStatus(available.length > 0 ? 'hint' : 'none');
         } catch (error) {
@@ -346,5 +393,8 @@ export function startWallets(root, options = {}) {
     }
     if (appButton) {
         appButton.addEventListener('click', () => pay(appButton.getAttribute('data-ld-wallet-id') || 'xaman'));
+    }
+    if (connectButton && walletConnectProjectId) {
+        connectButton.addEventListener('click', () => pay('walletconnect'));
     }
 }

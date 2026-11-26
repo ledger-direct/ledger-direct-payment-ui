@@ -21,7 +21,7 @@
  * the server states them.
  */
 
-import { startQr } from './qr.js';
+import { startQr, startFieldQr } from './qr.js';
 import { startWallets } from './wallets.js';
 
 const POLL_INTERVAL_MS = 8000;
@@ -273,6 +273,14 @@ export function startPaymentPage(root, options = {}) {
             }
             return;
         }
+        // A field QR dialog left open is modal: it would make the success view inert.
+        $$('[data-ld-qr-dialog]').forEach((dialog) => {
+            if (typeof dialog.close === 'function') {
+                dialog.close();
+            } else {
+                dialog.removeAttribute('open');
+            }
+        });
         if (open) {
             open.hidden = true;
         }
@@ -551,6 +559,7 @@ export function startPaymentPage(root, options = {}) {
     showState(state);
     startCountdown();
     startQr(root);
+    startFieldQr(root);
     startWallets(root, options);
     schedulePoll();
 
