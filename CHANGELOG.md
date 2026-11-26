@@ -1,4 +1,4 @@
-# Unreleased
+# 0.6.0
 
 - **WalletConnect shows its connection code.** XRPL Connect's WalletConnect adapter opens WalletConnect's
   dialog only when asked and otherwise hands the connection URI to a callback; the page did neither, so a click
