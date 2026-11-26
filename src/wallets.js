@@ -33,6 +33,16 @@ const AVAILABILITY_TIMEOUT_MS = 4000;
  *     bare import below (a code-split chunk); the classic build passes a
  *     native `import()` of the URL in `data-ld-wallets-src`.
  */
+/**
+ * The wallets offered in the browser-wallet list. WalletConnect is not a browser
+ * wallet and has its own button where the template renders one
+ * ([data-ld-wallet-connect]); a template from before that button keeps it in the
+ * list, its only way in on a desktop.
+ */
+export function inTheList(available, hasConnectButton) {
+    return hasConnectButton ? available.filter((adapter) => adapter.id !== 'walletconnect') : available;
+}
+
 export function startWallets(root, options = {}) {
     const section = root.querySelector('[data-ld-wallet-section]');
     if (!section) {
@@ -115,7 +125,8 @@ export function startWallets(root, options = {}) {
 
     /**
      * Who the wallet app says is asking: the shop's name and icon as the server
-     * rendered them (data-ld-shop-name, data-ld-shop-icon), else the host name and
+     * rendered them (data-ld-shop-name, data-ld-shop-icon; a relative icon URL is the
+     * page's, as an <img> on it would read it), else the host name and
      * the site's favicon. The URL is always the page's own origin — WalletConnect
      * compares it with where the request came from.
      */
@@ -126,7 +137,7 @@ export function startWallets(root, options = {}) {
         const rendered = (root.getAttribute('data-ld-shop-icon') || '').trim();
         if (rendered) {
             try {
-                icon = new URL(rendered, origin).toString();
+                icon = new URL(rendered, window.location.href).toString();
             } catch {
                 // a malformed icon URL is the favicon's loss, not the payment's
             }
@@ -361,9 +372,7 @@ export function startWallets(root, options = {}) {
         showStatus('loading');
         try {
             const m = await ensureManager();
-            // WalletConnect is not a browser wallet: it has its own button above the list.
-            const available = (await withTimeout(m.getAvailableWallets(), AVAILABILITY_TIMEOUT_MS, []))
-                .filter((adapter) => adapter.id !== 'walletconnect');
+            const available = inTheList(await withTimeout(m.getAvailableWallets(), AVAILABILITY_TIMEOUT_MS, []), !!connectButton);
             available.forEach((adapter) => listHost.appendChild(renderWallet(adapter)));
             showStatus(available.length > 0 ? 'hint' : 'none');
         } catch (error) {
