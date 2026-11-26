@@ -1,3 +1,15 @@
+# Unreleased
+
+- **WalletConnect shows its connection code.** XRPL Connect's WalletConnect adapter opens WalletConnect's
+  dialog only when asked and otherwise hands the connection URI to a callback; the page did neither, so a click
+  on WalletConnect waited with nothing to scan. The dialog now opens on every device, in the page's colour
+  scheme. Paid by hand with Joey Wallet's phone app over WalletConnect on the XRPL testnet, validated.
+- **WalletConnect has its own button,** `[data-ld-wallet-connect]`, above "pay with a browser wallet" and on
+  every width: it connects a wallet app, usually on a phone, so it is no longer in the browser-wallet list.
+- **The wallet app sees the shop.** WalletConnect tells the wallet who is asking: `data-ld-shop-name` and
+  `data-ld-shop-icon` on the root when the platform renders them, else the host name and `/favicon.ico`.
+  Before, the wallet showed the host name and a default icon.
+
 # 0.5.0
 
 - **Joey Wallet in the wallet list.** Joey's browser extension is offered next to the wallets XRPL Connect

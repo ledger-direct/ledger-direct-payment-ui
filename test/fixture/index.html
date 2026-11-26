@@ -37,7 +37,12 @@
     root.setAttribute('data-ld-state', state);
     root.setAttribute('data-ld-poll-url', '/status?state=' + state + (then ? '&then=' + then : ''));
     // ?wc=<project id> offers WalletConnect, as a merchant's setting would (a public identifier).
-    if (params.get('wc')) root.setAttribute('data-ld-wc-project', params.get('wc'));
+    // A template renders the WalletConnect button only then, and keeps the wallet section on phones.
+    if (params.get('wc')) {
+      root.setAttribute('data-ld-wc-project', params.get('wc'));
+      root.querySelector('[data-ld-wallet-section]').setAttribute('data-ld-wallet-mobile', '');
+      root.querySelector('[data-ld-wallet-connect]').hidden = false;
+    }
     if (state !== 'waiting') root.removeAttribute('data-ld-seconds-left');
     root.querySelectorAll('[data-ld-block]').forEach((el) => { el.hidden = el.getAttribute('data-ld-block') !== state; });
     root.querySelectorAll('[data-ld-status-for]').forEach((el) => { el.hidden = el.getAttribute('data-ld-status-for') !== state; });
@@ -58,6 +63,7 @@
      data-ld-amount-drops="747910"
      data-ld-payment-uri="https://xrplf.org//send?to=rMW6jyfsGyB5kPoYWVV4z1h9DA5KmEGPYq&amp;dt=795186163&amp;amount=0.74791"
      data-ld-wallets-src="/dist/wallets.js"
+     data-ld-shop-name="Fixture Shop"
      style="--ld-accent: #1f5eff">
 
   <header class="ld-top">
@@ -158,6 +164,7 @@
 
             <div data-ld-wallet-section>
               <div class="ld-or">or</div>
+              <button type="button" class="ld-btn ld-btn--secondary ld-btn--block" data-ld-wallet-connect hidden>Pay with a wallet app (WalletConnect)</button>
               <div data-ld-wallet-desktop>
                 <button type="button" class="ld-btn ld-btn--secondary ld-btn--block" data-ld-wallet-toggle aria-expanded="false" aria-controls="ld-wallets">Pay with a browser wallet</button>
                 <div class="ld-wallets" id="ld-wallets" data-ld-wallets hidden>

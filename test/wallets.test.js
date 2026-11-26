@@ -215,3 +215,64 @@ test('a submitted payment is no error, also right after one', async () => {
   assert.equal(root.message.textContent, 'Sent');
   assert.equal(root.message.hasAttribute('data-ld-wallet-error'), false);
 });
+
+/** The section with a WalletConnect button and a page with a project ID, for the tests below. */
+function walletConnectRoot(attributes = {}) {
+  const root = fakeRoot();
+  const connectButton = { addEventListener(type, fn) { this.click = fn; } };
+  const section = root.elements['[data-ld-wallet-section]'];
+  const sectionQuery = section.querySelector;
+  section.querySelector = (selector) => (selector === '[data-ld-wallet-connect]' ? connectButton : sectionQuery(selector));
+  root.setAttribute('data-ld-wc-project', '1557f5d5d6b1cae2e12cad3a1e6f762c');
+  Object.entries(attributes).forEach(([name, value]) => root.setAttribute(name, value));
+  return { root, connectButton };
+}
+
+async function clickWalletConnect(root, connectButton, origin = 'https://shop.example') {
+  const wallet = fakeLibrary();
+  const made = [];
+  wallet.lib.Adapters.WalletConnect = class { constructor(options) { made.push(options); } };
+  const asked = [];
+  wallet.lib.WalletManager = class {
+    connect(id) { asked.push(id); return Promise.resolve({ address: 'rCustomer', network: { id: 'testnet' } }); }
+    async disconnect() {}
+    async signAndSubmit() {}
+  };
+  const originalWindow = globalThis.window;
+  const { hostname } = new URL(origin);
+  globalThis.window = { location: { origin, hostname, reload() {} }, matchMedia: () => ({ matches: false }) };
+  try {
+    startWallets(root, { loadLibrary: async () => wallet.lib });
+    await connectButton.click();
+  } finally {
+    globalThis.window = originalWindow;
+  }
+  return { options: made[0], asked };
+}
+
+test('the WalletConnect button connects WalletConnect, with its own dialog, as the shop', async () => {
+  const { root, connectButton } = walletConnectRoot({ 'data-ld-shop-name': 'Demo Shop', 'data-ld-shop-icon': '/media/logo.png' });
+  const { options, asked } = await clickWalletConnect(root, connectButton);
+  assert.deepEqual(asked, ['walletconnect']);
+  assert.equal(options.projectId, '1557f5d5d6b1cae2e12cad3a1e6f762c');
+  assert.equal(options.useModal, true);
+  assert.equal(options.modalMode, 'always');
+  assert.deepEqual(options.metadata, {
+    name: 'Demo Shop', description: 'Demo Shop', url: 'https://shop.example', icons: ['https://shop.example/media/logo.png'],
+  });
+});
+
+test('without a rendered shop name and icon, the wallet sees the host and its favicon', async () => {
+  const { root, connectButton } = walletConnectRoot();
+  const { options } = await clickWalletConnect(root, connectButton);
+  assert.deepEqual(options.metadata, {
+    name: 'shop.example', description: 'shop.example', url: 'https://shop.example', icons: ['https://shop.example/favicon.ico'],
+  });
+});
+
+test('without a project ID the WalletConnect button does nothing', () => {
+  const { root, connectButton } = walletConnectRoot();
+  root.setAttribute('data-ld-wc-project', '');
+  startWallets(root, { loadLibrary: async () => { throw new Error('must not load'); } });
+  assert.equal(connectButton.click, undefined);
+});
