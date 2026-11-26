@@ -273,6 +273,14 @@ export function startPaymentPage(root, options = {}) {
             }
             return;
         }
+        // A field QR dialog left open is modal: it would make the success view inert.
+        $$('[data-ld-qr-dialog]').forEach((dialog) => {
+            if (typeof dialog.close === 'function') {
+                dialog.close();
+            } else {
+                dialog.removeAttribute('open');
+            }
+        });
         if (open) {
             open.hidden = true;
         }

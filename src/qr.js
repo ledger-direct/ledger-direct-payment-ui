@@ -99,9 +99,17 @@ export function startFieldQr(root) {
         if (shown) {
             shown.textContent = value;
         }
+        let title = '';
         dialog.querySelectorAll('[data-ld-qr-dialog-title]').forEach((el) => {
             el.hidden = el.getAttribute('data-ld-qr-dialog-title') !== kind;
+            if (!el.hidden) {
+                title = el.textContent.trim();
+            }
         });
+        // The dialog's accessible name is the title shown for this field.
+        if (title) {
+            dialog.setAttribute('aria-label', title);
+        }
         if (typeof dialog.showModal === 'function') {
             dialog.showModal();
         } else {
