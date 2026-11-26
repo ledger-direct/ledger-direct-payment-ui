@@ -111,6 +111,10 @@ export function startWallets(root, options = {}) {
         return library;
     }
 
+    function prefersDark() {
+        return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    }
+
     function buildAdapters(lib) {
         const { Adapters } = lib;
         const adapters = [
@@ -127,7 +131,15 @@ export function startWallets(root, options = {}) {
             adapters.push(new Adapters.Xaman({ apiKey: xamanApiKey }));
         }
         if (walletConnectProjectId) {
-            adapters.push(new Adapters.WalletConnect({ projectId: walletConnectProjectId }));
+            // Without its own dialog the adapter only hands the connection URI to an
+            // onQRCode callback and waits; nothing would show the code. WalletConnect's
+            // dialog shows it on a desktop and offers the wallet apps on a phone.
+            adapters.push(new Adapters.WalletConnect({
+                projectId: walletConnectProjectId,
+                useModal: true,
+                modalMode: 'always',
+                themeMode: prefersDark() ? 'dark' : 'light',
+            }));
         }
         return adapters;
     }

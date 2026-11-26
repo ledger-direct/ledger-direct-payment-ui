@@ -36,6 +36,8 @@
     const root = document.querySelector('[data-ld-page]');
     root.setAttribute('data-ld-state', state);
     root.setAttribute('data-ld-poll-url', '/status?state=' + state + (then ? '&then=' + then : ''));
+    // ?wc=<project id> offers WalletConnect, as a merchant's setting would (a public identifier).
+    if (params.get('wc')) root.setAttribute('data-ld-wc-project', params.get('wc'));
     if (state !== 'waiting') root.removeAttribute('data-ld-seconds-left');
     root.querySelectorAll('[data-ld-block]').forEach((el) => { el.hidden = el.getAttribute('data-ld-block') !== state; });
     root.querySelectorAll('[data-ld-status-for]').forEach((el) => { el.hidden = el.getAttribute('data-ld-status-for') !== state; });
