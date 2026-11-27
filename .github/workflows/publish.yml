@@ -1,0 +1,46 @@
+name: Publish to npm
+
+# Tagging is the release. Pushing a version tag runs the tests, rebuilds dist/,
+# checks that the committed dist/ is current and that the tag names the version
+# in package.json, then publishes @ledger-direct/payment-ui with provenance.
+#
+# Needs the repository secret NPM_TOKEN: a granular npm access token for the
+# ledger-direct organisation with "read and write" on this package and
+# "bypass 2FA" for automation. Provenance links the published tarball to this
+# workflow run and commit, publicly verifiable on the package page.
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: dist/ is committed and current
+        run: git diff --exit-code -- dist
+      - name: the tag names the version in package.json
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          version="$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$version" ]; then
+            echo "tag $tag does not match package.json version $version" >&2
+            exit 1
+          fi
+      - run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
